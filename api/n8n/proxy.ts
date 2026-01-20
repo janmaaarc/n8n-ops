@@ -173,11 +173,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
+    // Add debug info for non-2xx responses
+    if (!response.ok) {
+      return res.status(response.status).json({
+        ...data,
+        _debug: {
+          targetUrl,
+          n8nStatus: response.status,
+        },
+      });
+    }
+
     return res.status(response.status).json(data);
   } catch (error) {
     return res.status(500).json({
       error: 'Failed to proxy request to n8n',
       details: error instanceof Error ? error.message : 'Unknown error',
+      _debug: { targetUrl },
     });
   }
 }
