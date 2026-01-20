@@ -20,7 +20,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onReset,
 }) => {
   const [formData, setFormData] = useState<Settings>(settings);
-  const [showApiKey, setShowApiKey] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [notificationSettings, setNotificationSettings] = useState(getNotificationSettings);
   const { permission, requestPermission, isSupported } = useNotifications();
@@ -126,24 +125,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Key size={14} className="text-neutral-400" />
                   API Key
                 </label>
-                <div className="relative">
-                  <input
-                    type={showApiKey ? 'text' : 'password'}
-                    value={formData.apiKey}
-                    onChange={(e) => handleChange('apiKey', e.target.value)}
-                    onCopy={(e) => e.preventDefault()}
-                    onCut={(e) => e.preventDefault()}
-                    placeholder="Your n8n API key"
-                    className="w-full px-3 py-2 pr-16 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-                  >
-                    {showApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
+                <input
+                  type="password"
+                  value={formData.apiKey}
+                  onChange={(e) => handleChange('apiKey', e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  placeholder="Your n8n API key"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
+                />
               </div>
 
               {/* Test Connection */}
