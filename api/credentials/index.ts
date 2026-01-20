@@ -1,9 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { createCipheriv, randomBytes } from 'crypto';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const encryptionKey = process.env.ENCRYPTION_KEY;
+
+// Inline encryption to avoid Vercel bundling issues
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+
+const encrypt = (plaintext: string): string => {
+  if (!encryptionKey) {
+    throw new Error('ENCRYPTION_KEY not configured');
+  }
+  const keyBuffer = Buffer.from(encryptionKey, 'base64');
+  if (keyBuffer.length !== 32) {
+    throw new Error('ENCRYPTION_KEY must be 32 bytes when decoded from base64');
+  }
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv(ALGORITHM, keyBuffer, iv);
+  let ciphertext = cipher.update(plaintext, 'utf8');
+  ciphertext = Buffer.concat([ciphertext, cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  const combined = Buffer.concat([iv, authTag, ciphertext]);
+  return combined.toString('base64');
+};
 
 const getSupabaseClient = () => {
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -100,8 +122,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-      // Import encrypt dynamically to avoid module-level errors
-      const { encrypt } = await import('../lib/encryption');
       const encryptedApiKey = encrypt(apiKey);
 
       // Check if credentials exist

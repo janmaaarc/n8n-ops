@@ -1,4 +1,60 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+import { createDecipheriv } from 'crypto';
+
+// Environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const encryptionKey = process.env.ENCRYPTION_KEY;
+
+// Inline Supabase client to avoid bundling issues
+const getSupabaseClient = () => {
+  if (!supabaseUrl || !supabaseServiceKey) return null;
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+};
+
+// Inline decrypt function to avoid bundling issues
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+
+const decrypt = (encryptedData: string): string => {
+  if (!encryptionKey) throw new Error('ENCRYPTION_KEY not configured');
+  const keyBuffer = Buffer.from(encryptionKey, 'base64');
+  if (keyBuffer.length !== 32) throw new Error('ENCRYPTION_KEY must be 32 bytes');
+  const combined = Buffer.from(encryptedData, 'base64');
+  const iv = combined.subarray(0, IV_LENGTH);
+  const authTag = combined.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+  const ciphertext = combined.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
+  const decipher = createDecipheriv(ALGORITHM, keyBuffer, iv);
+  decipher.setAuthTag(authTag);
+  let plaintext = decipher.update(ciphertext);
+  plaintext = Buffer.concat([plaintext, decipher.final()]);
+  return plaintext.toString('utf8');
+};
+
+// Inline Supabase functions
+const verifyAccessToken = async (accessToken: string) => {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  const { data, error } = await client.auth.getUser(accessToken);
+  if (error || !data.user) return null;
+  return data.user;
+};
+
+const getUserCredentials = async (userId: string) => {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  const { data, error } = await client
+    .from('user_credentials')
+    .select('n8n_url, encrypted_api_key')
+    .eq('user_id', userId)
+    .single();
+  if (error || !data) return null;
+  return data;
+};
 
 interface N8nCredentials {
   url: string;
@@ -34,10 +90,6 @@ async function getCredentials(req: VercelRequest): Promise<CredentialsResult> {
   if (authHeader?.startsWith('Bearer ')) {
     debug.hasAuthHeader = true;
     try {
-      // Dynamic imports to avoid module-level errors
-      const { verifyAccessToken, getUserCredentials } = await import('../lib/supabase-server');
-      const { decrypt } = await import('../lib/encryption');
-
       const accessToken = authHeader.substring(7);
       const user = await verifyAccessToken(accessToken);
 
