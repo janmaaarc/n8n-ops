@@ -61,72 +61,38 @@ interface N8nCredentials {
   apiKey: string;
 }
 
-interface CredentialsResult {
-  credentials: N8nCredentials | null;
-  debug: {
-    hasAuthHeader: boolean;
-    userVerified: boolean;
-    hasStoredCredentials: boolean;
-    hasEnvCredentials: boolean;
-    error?: string;
-  };
-}
-
 /**
  * Get n8n credentials from either:
  * 1. User's stored credentials (if authenticated with Supabase)
  * 2. Environment variables (fallback for single-user mode)
  */
-async function getCredentials(req: VercelRequest): Promise<CredentialsResult> {
-  const debug = {
-    hasAuthHeader: false,
-    userVerified: false,
-    hasStoredCredentials: false,
-    hasEnvCredentials: false,
-  };
-
+async function getCredentials(req: VercelRequest): Promise<N8nCredentials | null> {
   // Check for Authorization header (multi-user mode)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
-    debug.hasAuthHeader = true;
     try {
       const accessToken = authHeader.substring(7);
       const user = await verifyAccessToken(accessToken);
-
       if (user) {
-        debug.userVerified = true;
         const credentials = await getUserCredentials(user.id);
         if (credentials) {
-          debug.hasStoredCredentials = true;
           const apiKey = decrypt(credentials.encrypted_api_key);
-          return {
-            credentials: { url: credentials.n8n_url, apiKey },
-            debug,
-          };
+          return { url: credentials.n8n_url, apiKey };
         }
       }
     } catch (err) {
       console.error('Failed to get user credentials:', err);
-      return {
-        credentials: null,
-        debug: { ...debug, error: err instanceof Error ? err.message : 'Unknown error' },
-      };
     }
   }
 
   // Fallback to environment variables (single-user mode)
   const n8nUrl = process.env.N8N_URL;
   const n8nApiKey = process.env.N8N_API_KEY;
-
   if (n8nUrl && n8nApiKey) {
-    debug.hasEnvCredentials = true;
-    return {
-      credentials: { url: n8nUrl, apiKey: n8nApiKey },
-      debug,
-    };
+    return { url: n8nUrl, apiKey: n8nApiKey };
   }
 
-  return { credentials: null, debug };
+  return null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -138,13 +104,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const { credentials, debug } = await getCredentials(req);
+  const credentials = await getCredentials(req);
 
   if (!credentials) {
     return res.status(401).json({
       error: 'n8n credentials not configured',
       message: 'Please configure your n8n URL and API key in settings.',
-      debug,
     });
   }
 
@@ -179,23 +144,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    // Add debug info for non-2xx responses
-    if (!response.ok) {
-      return res.status(response.status).json({
-        ...data,
-        _debug: {
-          targetUrl,
-          n8nStatus: response.status,
-        },
-      });
-    }
-
     return res.status(response.status).json(data);
   } catch (error) {
     return res.status(500).json({
       error: 'Failed to proxy request to n8n',
       details: error instanceof Error ? error.message : 'Unknown error',
-      _debug: { targetUrl },
     });
   }
 }
