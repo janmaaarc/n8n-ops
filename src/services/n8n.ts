@@ -1,22 +1,37 @@
 import type { Workflow, Execution } from '../types';
+import { getStoredSettings } from '../hooks/useSettings';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const getBaseUrl = (): string => {
-  // In production, use the Vercel serverless proxy
-  if (import.meta.env.PROD) {
-    return '/api/n8n';
-  }
-  // In development, use the direct n8n URL (requires CORS configuration)
-  return import.meta.env.VITE_N8N_URL || '';
+  // Always use proxy path to avoid CORS issues
+  // In dev: Vite proxy forwards to VITE_N8N_URL
+  // In prod: Vercel serverless function handles it
+  return '/api/n8n';
 };
 
-const getHeaders = (): HeadersInit => {
-  const headers: HeadersInit = {
+const getHeaders = async (): Promise<HeadersInit> => {
+  const settings = getStoredSettings();
+
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  // Only add API key header in development (proxy handles it in production)
-  if (import.meta.env.DEV && import.meta.env.VITE_N8N_API_KEY) {
-    headers['X-N8N-API-KEY'] = import.meta.env.VITE_N8N_API_KEY;
+  // If Supabase is configured and user is authenticated, include the access token
+  // The serverless proxy will use this to look up the user's encrypted credentials
+  if (isSupabaseConfigured()) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      headers['Authorization'] = `Bearer ${data.session.access_token}`;
+    }
+  }
+
+  // For development without Supabase, use local settings or env variable
+  if (!isSupabaseConfigured()) {
+    if (settings.apiKey) {
+      headers['X-N8N-API-KEY'] = settings.apiKey;
+    } else if (import.meta.env.DEV && import.meta.env.VITE_N8N_API_KEY) {
+      headers['X-N8N-API-KEY'] = import.meta.env.VITE_N8N_API_KEY;
+    }
   }
 
   return headers;
@@ -25,7 +40,7 @@ const getHeaders = (): HeadersInit => {
 export const n8nApi = {
   async getWorkflows(): Promise<{ data: Workflow[] }> {
     const res = await fetch(`${getBaseUrl()}/api/v1/workflows`, {
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
 
     if (!res.ok) {
@@ -37,7 +52,7 @@ export const n8nApi = {
 
   async getWorkflow(id: string): Promise<Workflow> {
     const res = await fetch(`${getBaseUrl()}/api/v1/workflows/${id}`, {
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
 
     if (!res.ok) {
@@ -59,7 +74,7 @@ export const n8nApi = {
 
     const url = `${getBaseUrl()}/api/v1/executions?${searchParams.toString()}`;
     const res = await fetch(url, {
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
 
     if (!res.ok) {
@@ -71,7 +86,7 @@ export const n8nApi = {
 
   async getExecution(id: string): Promise<Execution> {
     const res = await fetch(`${getBaseUrl()}/api/v1/executions/${id}`, {
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
 
     if (!res.ok) {
@@ -84,7 +99,7 @@ export const n8nApi = {
   async activateWorkflow(id: string): Promise<Workflow> {
     const res = await fetch(`${getBaseUrl()}/api/v1/workflows/${id}/activate`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
 
     if (!res.ok) {
@@ -97,7 +112,7 @@ export const n8nApi = {
   async deactivateWorkflow(id: string): Promise<Workflow> {
     const res = await fetch(`${getBaseUrl()}/api/v1/workflows/${id}/deactivate`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
 
     if (!res.ok) {
@@ -105,5 +120,30 @@ export const n8nApi = {
     }
 
     return res.json();
+  },
+
+  async triggerWorkflow(id: string): Promise<{ executionId: string }> {
+    const res = await fetch(`${getBaseUrl()}/api/v1/workflows/${id}/run`, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify({}),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to trigger workflow: ${res.statusText}`);
+    }
+
+    return res.json();
+  },
+
+  async testConnection(): Promise<boolean> {
+    try {
+      const res = await fetch(`${getBaseUrl()}/api/v1/workflows?limit=1`, {
+        headers: await getHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 };

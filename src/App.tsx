@@ -1,14 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { GitBranch, Play, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Workflow, Play, CheckCircle, AlertCircle, RefreshCw, Settings, HelpCircle, LogOut, Loader2 } from 'lucide-react';
 import { ThemeToggle } from './components/ThemeToggle';
 import { StatCard } from './components/StatCard';
 import { Section } from './components/Section';
 import { ExecutionFeed } from './components/ExecutionFeed';
 import { WorkflowList } from './components/WorkflowList';
-import { ErrorPanel } from './components/ErrorPanel';
-import { useWorkflows, useExecutions, useToggleWorkflow, useDashboardStats } from './hooks/useN8n';
-import type { Execution, Workflow } from './types';
+import { ExecutionDetailsPanel } from './components/ExecutionDetailsPanel';
+import { SettingsModal } from './components/SettingsModal';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { ExecutionChart } from './components/ExecutionChart';
+import { ToastContainer, useToast } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { LandingPage } from './components/LandingPage';
+import { useWorkflows, useExecutions, useToggleWorkflow, useTriggerWorkflow, useDashboardStats } from './hooks/useN8n';
+import { useSettings } from './hooks/useSettings';
+import { useFavorites } from './hooks/useFavorites';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useExecutionNotifications } from './hooks/useExecutionNotifications';
+import { useAuth } from './contexts/AuthContext';
+import { isSupabaseConfigured } from './lib/supabase';
+import type { Execution, Workflow as WorkflowType } from './types';
 
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -20,16 +31,38 @@ const App: React.FC = () => {
   });
 
   const [selectedExecution, setSelectedExecution] = useState<Execution | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch data
-  const { data: workflows, isLoading: workflowsLoading, refetch: refetchWorkflows } = useWorkflows();
-  const { data: executions, isLoading: executionsLoading, refetch: refetchExecutions } = useExecutions({ limit: 50 });
+  const { user, isAuthenticated, signOut, loading: authLoading } = useAuth();
+  const { settings, isConfigured, updateSettings, resetSettings } = useSettings();
+  const { favorites, toggleFavorite } = useFavorites();
+  const toast = useToast();
+
+  const refreshOptions = {
+    autoRefresh: settings.autoRefresh,
+    refreshInterval: settings.refreshInterval,
+  };
+
+  // Only fetch data if authenticated (when Supabase is configured) or if Supabase is not configured (single-user mode)
+  const shouldFetchData = !isSupabaseConfigured() || isAuthenticated;
+
+  const { data: workflows, isLoading: workflowsLoading, refetch: refetchWorkflows } = useWorkflows(
+    shouldFetchData ? refreshOptions : { autoRefresh: false }
+  );
+  const { data: executions, isLoading: executionsLoading, refetch: refetchExecutions } = useExecutions(
+    { limit: 50 },
+    shouldFetchData ? refreshOptions : { autoRefresh: false }
+  );
   const toggleWorkflow = useToggleWorkflow();
+  const triggerWorkflow = useTriggerWorkflow();
 
-  // Calculate stats
   const stats = useDashboardStats(workflows, executions);
 
-  // Theme handling
+  // Browser notifications for new executions
+  useExecutionNotifications(executions);
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -40,81 +73,177 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  const toggleTheme = () => setDarkMode(!darkMode);
+  const toggleTheme = () => setDarkMode((prev) => !prev);
 
   const handleRefresh = () => {
     refetchWorkflows();
     refetchExecutions();
+    toast.info('Refreshing data...');
   };
 
-  const handleToggleWorkflow = (workflow: Workflow) => {
-    toggleWorkflow.mutate(workflow);
+  const handleToggleWorkflow = (workflow: WorkflowType) => {
+    const action = workflow.active ? 'Deactivating' : 'Activating';
+    toast.info(`${action} ${workflow.name}...`);
+    toggleWorkflow.mutate(workflow, {
+      onSuccess: () => {
+        toast.success(
+          workflow.active ? 'Workflow deactivated' : 'Workflow activated',
+          workflow.name
+        );
+      },
+      onError: () => {
+        toast.error('Failed to toggle workflow', workflow.name);
+      },
+    });
+  };
+
+  const handleTriggerWorkflow = (workflow: WorkflowType) => {
+    toast.info(`Triggering ${workflow.name}...`);
+    triggerWorkflow.mutate(workflow.id, {
+      onSuccess: () => {
+        toast.success('Workflow triggered', workflow.name);
+      },
+      onError: () => {
+        toast.error('Failed to trigger workflow', workflow.name);
+      },
+    });
   };
 
   const handleExecutionClick = (execution: Execution) => {
-    if (execution.status === 'error') {
-      setSelectedExecution(execution);
+    setSelectedExecution(execution);
+  };
+
+  const handleCloseModals = () => {
+    if (selectedExecution) {
+      setSelectedExecution(null);
+    } else if (showSettings) {
+      setShowSettings(false);
+    } else if (showShortcuts) {
+      setShowShortcuts(false);
     }
   };
 
-  // Filter recent executions for the feed
+  const handleSignOut = async () => {
+    await signOut();
+    toast.info('Signed out successfully');
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onRefresh: handleRefresh,
+    onSearch: () => searchInputRef.current?.focus(),
+    onSettings: () => setShowSettings(true),
+    onHelp: () => setShowShortcuts(true),
+    onEscape: handleCloseModals,
+    onToggleTheme: toggleTheme,
+  });
+
   const recentExecutions = executions?.slice(0, 10) || [];
   const errorExecutions = executions?.filter(e => e.status === 'error').slice(0, 5) || [];
 
-  return (
-    <div className="min-h-screen bg-stone-100 dark:bg-neutral-900 font-sans text-neutral-800 dark:text-neutral-300 selection:bg-neutral-200 dark:selection:bg-neutral-800 transition-colors duration-300">
-      {/* Background Grid Pattern */}
-      <div
-        className="fixed inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
-      {/* Theme Toggle */}
-      <div className="fixed top-8 right-8 z-50">
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={handleRefresh}
-            className="p-2.5 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md shadow-sm border border-black/5 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/80 transition-all text-neutral-600 dark:text-neutral-400"
-            aria-label="Refresh data"
-          >
-            <RefreshCw size={18} />
-          </motion.button>
-          <div className="flex items-center bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-full p-1.5 shadow-sm border border-black/5 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/80 transition-all">
-            <ThemeToggle darkMode={darkMode} toggleTheme={toggleTheme} />
+  // Show landing page if Supabase is configured and user is not authenticated
+  if (isSupabaseConfigured() && !isAuthenticated) {
+    return <LandingPage darkMode={darkMode} toggleTheme={toggleTheme} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans text-neutral-900 dark:text-neutral-100">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-2">
+              <Workflow size={20} className="text-indigo-500" />
+              <h1 className="text-sm font-semibold">n8n Dashboard</h1>
+              {!isConfigured && (
+                <span className="hidden sm:inline ml-2 px-2 py-0.5 text-xs rounded bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                  Not configured
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleRefresh}
+                className="p-2 rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                aria-label="Refresh data (R)"
+                title="Refresh (R)"
+              >
+                <RefreshCw size={18} />
+              </button>
+              <button
+                onClick={() => setShowShortcuts(true)}
+                className="hidden sm:block p-2 rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                aria-label="Keyboard shortcuts (?)"
+                title="Shortcuts (?)"
+              >
+                <HelpCircle size={18} />
+              </button>
+              <button
+                onClick={() => setShowSettings(true)}
+                className="p-2 rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                aria-label="Settings (,)"
+                title="Settings (,)"
+              >
+                <Settings size={18} />
+              </button>
+              <ThemeToggle darkMode={darkMode} toggleTheme={toggleTheme} />
+              {/* Sign Out button (only show when Supabase is configured and user is authenticated) */}
+              {isSupabaseConfigured() && isAuthenticated && (
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                  aria-label="Sign out"
+                  title={`Sign out (${user?.email})`}
+                >
+                  <LogOut size={18} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="relative z-10 mx-auto max-w-screen-xl px-6 md:px-12 py-12 md:py-16">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
-        >
-          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white">
-            n8n Dashboard
-          </h1>
-          <p className="text-neutral-600 dark:text-neutral-400 mt-2">
-            Monitor your workflows in real-time
-          </p>
-        </motion.div>
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
+        {/* Not Configured State */}
+        {!isConfigured && (
+          <div className="mb-6 p-4 rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10">
+            <div className="flex items-start gap-3">
+              <Settings size={20} className="text-amber-600 dark:text-amber-500 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-medium text-amber-800 dark:text-amber-400">
+                  Connect to your n8n instance
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-500/80 mt-1">
+                  Configure your n8n URL and API key in{' '}
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="underline hover:no-underline"
+                  >
+                    Settings
+                  </button>{' '}
+                  to start monitoring your workflows.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Stats Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-12"
-        >
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
           <StatCard
             label="Workflows"
             value={stats.totalWorkflows}
-            icon={GitBranch}
+            icon={Workflow}
           />
           <StatCard
             label="Executions"
@@ -134,60 +263,86 @@ const App: React.FC = () => {
             icon={AlertCircle}
             color={stats.recentErrors > 0 ? 'error' : 'default'}
           />
-        </motion.div>
+        </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Workflows Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-2"
-          >
+        {/* Execution Chart */}
+        <div className="mb-8">
+          <Section title="Execution History (7 days)">
+            <ErrorBoundary>
+              <ExecutionChart executions={executions || []} isLoading={executionsLoading} />
+            </ErrorBoundary>
+          </Section>
+        </div>
+
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Workflows */}
+          <div className="lg:col-span-2">
             <Section title="Workflows">
-              <WorkflowList
-                workflows={workflows || []}
-                isLoading={workflowsLoading}
-                onToggleActive={handleToggleWorkflow}
-              />
+              <ErrorBoundary>
+                <WorkflowList
+                  workflows={workflows || []}
+                  isLoading={workflowsLoading}
+                  onToggleActive={handleToggleWorkflow}
+                  onTrigger={handleTriggerWorkflow}
+                  favorites={favorites}
+                  onToggleFavorite={toggleFavorite}
+                  searchInputRef={searchInputRef}
+                />
+              </ErrorBoundary>
             </Section>
-          </motion.div>
+          </div>
 
-          {/* Right Sidebar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-8"
-          >
-            {/* Recent Executions */}
+          {/* Sidebar */}
+          <div className="space-y-6">
             <Section title="Recent Executions">
-              <ExecutionFeed
-                executions={recentExecutions}
-                isLoading={executionsLoading}
-                onExecutionClick={handleExecutionClick}
-              />
-            </Section>
-
-            {/* Recent Errors */}
-            {errorExecutions.length > 0 && (
-              <Section title="Recent Errors">
+              <ErrorBoundary>
                 <ExecutionFeed
-                  executions={errorExecutions}
+                  executions={recentExecutions}
+                  isLoading={executionsLoading}
                   onExecutionClick={handleExecutionClick}
                 />
+              </ErrorBoundary>
+            </Section>
+
+            {errorExecutions.length > 0 && (
+              <Section title="Recent Errors">
+                <ErrorBoundary>
+                  <ExecutionFeed
+                    executions={errorExecutions}
+                    onExecutionClick={handleExecutionClick}
+                    showFilter={false}
+                  />
+                </ErrorBoundary>
               </Section>
             )}
-          </motion.div>
+          </div>
         </div>
-      </div>
+      </main>
 
-      {/* Error Panel Modal */}
-      <ErrorPanel
+      {/* Execution Details Panel */}
+      <ExecutionDetailsPanel
         execution={selectedExecution}
         onClose={() => setSelectedExecution(null)}
       />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        settings={settings}
+        onSave={updateSettings}
+        onReset={resetSettings}
+      />
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismissToast} />
     </div>
   );
 };

@@ -1,11 +1,68 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { verifyAccessToken, getUserCredentials } from '../lib/supabase-server';
+import { decrypt } from '../lib/encryption';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+interface N8nCredentials {
+  url: string;
+  apiKey: string;
+}
+
+/**
+ * Get n8n credentials from either:
+ * 1. User's stored credentials (if authenticated with Supabase)
+ * 2. Environment variables (fallback for single-user mode)
+ */
+async function getCredentials(req: VercelRequest): Promise<N8nCredentials | null> {
+  // Check for Authorization header (multi-user mode)
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const accessToken = authHeader.substring(7);
+    const user = await verifyAccessToken(accessToken);
+
+    if (user) {
+      const credentials = await getUserCredentials(user.id);
+      if (credentials) {
+        try {
+          const apiKey = decrypt(credentials.encrypted_api_key);
+          return {
+            url: credentials.n8n_url,
+            apiKey,
+          };
+        } catch (err) {
+          console.error('Failed to decrypt API key:', err);
+          return null;
+        }
+      }
+    }
+  }
+
+  // Fallback to environment variables (single-user mode)
   const n8nUrl = process.env.N8N_URL;
   const n8nApiKey = process.env.N8N_API_KEY;
 
-  if (!n8nUrl || !n8nApiKey) {
-    return res.status(500).json({ error: 'n8n configuration missing' });
+  if (n8nUrl && n8nApiKey) {
+    return { url: n8nUrl, apiKey: n8nApiKey };
+  }
+
+  return null;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(200).end();
+  }
+
+  const credentials = await getCredentials(req);
+
+  if (!credentials) {
+    return res.status(401).json({
+      error: 'n8n credentials not configured',
+      message: 'Please configure your n8n URL and API key in settings.',
+    });
   }
 
   // Get the path from the catch-all route
@@ -13,14 +70,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pathString = Array.isArray(path) ? path.join('/') : path || '';
 
   // Build the target URL
-  const targetUrl = `${n8nUrl}/${pathString}${req.url?.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`;
+  const targetUrl = `${credentials.url}/${pathString}${req.url?.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`;
 
   try {
     const response = await fetch(targetUrl, {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-        'X-N8N-API-KEY': n8nApiKey,
+        'X-N8N-API-KEY': credentials.apiKey,
       },
       body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
     });
@@ -30,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     return res.status(response.status).json(data);
   } catch (error) {

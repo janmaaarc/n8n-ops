@@ -2,14 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { n8nApi } from '../services/n8n';
 import type { Workflow, Execution, DashboardStats } from '../types';
 
-export const useWorkflows = () => {
+interface RefreshOptions {
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+}
+
+export const useWorkflows = (options?: RefreshOptions) => {
+  const { autoRefresh = true, refreshInterval = 30 } = options || {};
+
   return useQuery({
     queryKey: ['workflows'],
     queryFn: async () => {
       const response = await n8nApi.getWorkflows();
       return response.data;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
   });
 };
 
@@ -17,14 +24,16 @@ export const useExecutions = (params?: {
   limit?: number;
   status?: string;
   workflowId?: string;
-}) => {
+}, options?: RefreshOptions) => {
+  const { autoRefresh = true, refreshInterval = 10 } = options || {};
+
   return useQuery({
     queryKey: ['executions', params],
     queryFn: async () => {
       const response = await n8nApi.getExecutions(params);
       return response.data;
     },
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
   });
 };
 
@@ -48,6 +57,19 @@ export const useToggleWorkflow = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+  });
+};
+
+export const useTriggerWorkflow = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (workflowId: string) => {
+      return n8nApi.triggerWorkflow(workflowId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['executions'] });
     },
   });
 };

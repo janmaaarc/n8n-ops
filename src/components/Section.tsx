@@ -8,9 +8,9 @@ interface SectionProps {
 
 export const Section: React.FC<SectionProps> = ({ title, children, action }) => {
   return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
           {title}
         </h2>
         {action}

@@ -8,23 +8,31 @@ A monitoring dashboard for n8n workflows built with React, TypeScript, and Tailw
   - View all workflows with status indicators
   - Toggle workflows active/inactive
   - Manual workflow triggering
-  - Search, filter, and sort workflows
+  - Search workflows by name, ID, or tags
+  - Filter by status (active/inactive) and tags
+  - Sort by favorites, name, status, or node count
   - Bulk activate/deactivate actions
   - Favorites system with persistence
+  - Export to CSV/JSON
 
 - **Execution Monitoring**
   - Real-time execution feed with auto-refresh
-  - 7-day execution history chart
+  - 7-day execution history chart with loading skeleton
   - Detailed execution panel (success/error/running)
+  - Filter executions by status
+  - Export executions to CSV/JSON
   - Error tracking with stack traces
 
 - **User Experience**
   - Keyboard shortcuts (R: refresh, /: search, ,: settings, D: dark mode, ?: help)
   - Toast notifications for actions
-  - Pagination for large lists
+  - Pagination for large lists (workflows and executions)
   - Dark/light theme toggle
   - Settings modal for connection configuration
+  - Configurable auto-refresh interval
   - Connection testing
+  - Error boundaries for graceful error handling
+  - Mobile-responsive design
 
 ## Tech Stack
 
@@ -90,7 +98,7 @@ npm run dev
 src/
 ├── components/           # UI components
 │   ├── WorkflowList.tsx      # Workflow table with search/filter/pagination
-│   ├── ExecutionFeed.tsx     # Recent executions list
+│   ├── ExecutionFeed.tsx     # Recent executions list with filter
 │   ├── ExecutionChart.tsx    # 7-day execution history chart
 │   ├── ExecutionDetailsPanel.tsx  # Execution details modal
 │   ├── StatCard.tsx          # Dashboard stat cards
@@ -98,8 +106,8 @@ src/
 │   ├── SettingsModal.tsx     # Settings configuration
 │   ├── KeyboardShortcutsModal.tsx # Shortcuts help
 │   ├── Toast.tsx             # Toast notification system
-│   ├── ThemeToggle.tsx       # Dark mode toggle
-│   └── ErrorPanel.tsx        # Error display (legacy)
+│   ├── ErrorBoundary.tsx     # Error boundary component
+│   └── ThemeToggle.tsx       # Dark mode toggle
 ├── hooks/                # React hooks
 │   ├── useN8n.ts             # API hooks (React Query)
 │   ├── useSettings.ts        # Settings management
@@ -107,6 +115,9 @@ src/
 │   └── useKeyboardShortcuts.ts # Keyboard shortcuts
 ├── services/             # API client
 │   └── n8n.ts                # n8n API wrapper
+├── utils/                # Utilities
+│   ├── date.ts               # Date formatting
+│   └── export.ts             # CSV/JSON export functions
 ├── types/                # TypeScript interfaces
 │   └── index.ts
 └── App.tsx               # Main layout
@@ -123,7 +134,26 @@ api/
 - Production uses a Vercel serverless proxy to secure API keys
 - Settings and favorites are persisted in localStorage
 
+## Security
+
+### API Key Protection
+
+| Environment | Where to set | Exposed to browser? |
+|-------------|--------------|---------------------|
+| **Production** | Vercel Dashboard env vars | No (serverless proxy) |
+| **Development** | `.env` file | Yes (local only) |
+
+**Production**: API keys are stored in Vercel environment variables and accessed only by the serverless proxy (`api/n8n/[...path].ts`). The browser never sees the actual API key.
+
+**Development**: `VITE_*` variables are bundled into the client. This is acceptable for local development since the `.env` file is gitignored.
+
+### Best Practices
+
+1. Never commit `.env` files
+2. Use Vercel environment variables for production
+3. Rotate API keys if accidentally exposed
+4. The in-app settings (localStorage) are for personal/internal use only
+
 ## Deployment
 
 Deploy to Vercel and set the environment variables (`N8N_URL`, `N8N_API_KEY`) in your project settings.
-# n8n-dashboard
