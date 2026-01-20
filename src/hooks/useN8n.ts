@@ -1,0 +1,85 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { n8nApi } from '../services/n8n';
+import type { Workflow, Execution, DashboardStats } from '../types';
+
+export const useWorkflows = () => {
+  return useQuery({
+    queryKey: ['workflows'],
+    queryFn: async () => {
+      const response = await n8nApi.getWorkflows();
+      return response.data;
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+};
+
+export const useExecutions = (params?: {
+  limit?: number;
+  status?: string;
+  workflowId?: string;
+}) => {
+  return useQuery({
+    queryKey: ['executions', params],
+    queryFn: async () => {
+      const response = await n8nApi.getExecutions(params);
+      return response.data;
+    },
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+};
+
+export const useExecution = (id: string | null) => {
+  return useQuery({
+    queryKey: ['execution', id],
+    queryFn: () => n8nApi.getExecution(id!),
+    enabled: !!id,
+  });
+};
+
+export const useToggleWorkflow = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (workflow: Workflow) => {
+      if (workflow.active) {
+        return n8nApi.deactivateWorkflow(workflow.id);
+      }
+      return n8nApi.activateWorkflow(workflow.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+  });
+};
+
+export const useDashboardStats = (
+  workflows: Workflow[] | undefined,
+  executions: Execution[] | undefined
+): DashboardStats => {
+  if (!workflows || !executions) {
+    return {
+      totalWorkflows: 0,
+      activeWorkflows: 0,
+      totalExecutions: 0,
+      successRate: 0,
+      recentErrors: 0,
+    };
+  }
+
+  const totalWorkflows = workflows.length;
+  const activeWorkflows = workflows.filter((w) => w.active).length;
+  const totalExecutions = executions.length;
+  const successfulExecutions = executions.filter((e) => e.status === 'success').length;
+  const successRate = totalExecutions > 0
+    ? (successfulExecutions / totalExecutions) * 100
+    : 0;
+  const recentErrors = executions.filter((e) => e.status === 'error').length;
+
+  return {
+    totalWorkflows,
+    activeWorkflows,
+    totalExecutions,
+    successRate,
+    recentErrors,
+  };
+};
