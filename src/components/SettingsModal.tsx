@@ -3,6 +3,9 @@ import { X, Server, Key, Clock, RotateCw, CheckCircle, XCircle, Loader2, Bell } 
 import { n8nApi } from '../services/n8n';
 import type { Settings } from '../hooks/useSettings';
 import { getNotificationSettings, saveNotificationSettings, useNotifications } from '../hooks/useNotifications';
+import { useCredentials } from '../hooks/useCredentials';
+import { useAuth } from '../contexts/AuthContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -22,13 +25,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [formData, setFormData] = useState<Settings>(settings);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [notificationSettings, setNotificationSettings] = useState(getNotificationSettings);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { permission, requestPermission, isSupported } = useNotifications();
+  const { isAuthenticated } = useAuth();
+  const { credentials, saveCredentials, loading: credentialsLoading } = useCredentials();
+
+  const useSupabaseCredentials = isSupabaseConfigured() && isAuthenticated;
 
   useEffect(() => {
-    setFormData(settings);
+    if (useSupabaseCredentials && credentials) {
+      setFormData((prev) => ({
+        ...prev,
+        n8nUrl: credentials.n8nUrl || prev.n8nUrl,
+        apiKey: credentials.hasApiKey ? '••••••••' : '',
+      }));
+    } else {
+      setFormData(settings);
+    }
     setConnectionStatus('idle');
     setNotificationSettings(getNotificationSettings());
-  }, [settings, isOpen]);
+    setSaveError(null);
+  }, [settings, isOpen, credentials, useSupabaseCredentials]);
 
   if (!isOpen) return null;
 
@@ -38,9 +56,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const handleSave = () => {
-    onSave(formData);
-    onClose();
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      if (useSupabaseCredentials) {
+        // For multi-user mode, save credentials to Supabase
+        // Only save if API key was changed (not the placeholder)
+        if (formData.apiKey && formData.apiKey !== '••••••••') {
+          const success = await saveCredentials(formData.n8nUrl, formData.apiKey);
+          if (!success) {
+            setSaveError('Failed to save credentials');
+            return;
+          }
+        } else if (formData.n8nUrl !== credentials?.n8nUrl) {
+          // URL changed but API key wasn't - need to re-enter API key
+          setSaveError('Please enter your API key to save changes');
+          return;
+        }
+        // Save local preferences (auto-refresh, interval)
+        onSave({ refreshInterval: formData.refreshInterval, autoRefresh: formData.autoRefresh });
+      } else {
+        // For single-user mode, save to localStorage
+        onSave(formData);
+      }
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -129,11 +173,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="password"
                   value={formData.apiKey}
                   onChange={(e) => handleChange('apiKey', e.target.value)}
+                  onFocus={() => {
+                    if (formData.apiKey === '••••••••') {
+                      setFormData((prev) => ({ ...prev, apiKey: '' }));
+                    }
+                  }}
                   onCopy={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Your n8n API key"
+                  placeholder={useSupabaseCredentials && credentials?.hasApiKey ? 'Enter new API key to update' : 'Your n8n API key'}
                   className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
                 />
+                {useSupabaseCredentials && credentials?.hasApiKey && (
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    API key is securely stored. Enter a new key only to update it.
+                  </p>
+                )}
               </div>
 
               {/* Test Connection */}
@@ -301,26 +355,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
         </div>
 
+        {/* Error Message */}
+        {saveError && (
+          <div className="px-4 py-2 bg-red-50 dark:bg-red-500/10 border-t border-red-200 dark:border-red-500/20">
+            <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50">
           <button
             onClick={handleReset}
-            className="px-3 py-1.5 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-colors"
+            disabled={saving}
+            className="px-3 py-1.5 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
           >
             Reset
           </button>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded transition-colors"
+              disabled={saving}
+              className="px-3 py-1.5 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-1.5 text-sm text-white bg-indigo-500 hover:bg-indigo-600 rounded transition-colors"
+              disabled={saving || credentialsLoading}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-indigo-500 hover:bg-indigo-600 rounded transition-colors disabled:opacity-50"
             >
-              Save
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
