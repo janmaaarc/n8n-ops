@@ -11,6 +11,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from 'recharts';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfWeek, startOfMonth, eachWeekOfInterval, eachMonthOfInterval, subMonths } from 'date-fns';
 import { PageHeader } from '../components/layout';
@@ -310,38 +311,51 @@ export const UsageReportsPage: React.FC = () => {
                 <h3 className="text-sm font-medium text-neutral-900 dark:text-white mb-4">
                   Workflow Distribution
                 </h3>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={workflowUsage}
-                        dataKey="count"
-                        nameKey="workflowName"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={({ name, percent }: { name?: string; percent?: number }) => {
-                          const displayName = name || 'Unknown';
-                          const displayPercent = percent || 0;
-                          return `${displayName.slice(0, 10)}${displayName.length > 10 ? '...' : ''} (${(displayPercent * 100).toFixed(0)}%)`;
-                        }}
-                        labelLine={false}
-                      >
-                        {workflowUsage.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'var(--tooltip-bg, #1f2937)',
-                          border: '1px solid #374151',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value) => [value as number, '']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                {workflowUsage.length === 0 ? (
+                  <div className="h-72 flex items-center justify-center text-neutral-400">
+                    No workflow data
+                  </div>
+                ) : (
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={workflowUsage}
+                          dataKey="count"
+                          nameKey="workflowName"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={35}
+                          outerRadius={65}
+                          paddingAngle={2}
+                        >
+                          {workflowUsage.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: '1px solid #374151',
+                            borderRadius: '8px',
+                            color: '#fff',
+                          }}
+                        />
+                        <Legend
+                          layout="vertical"
+                          align="right"
+                          verticalAlign="middle"
+                          iconSize={8}
+                          formatter={(value: string) => (
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                              {value.length > 12 ? `${value.slice(0, 12)}...` : value}
+                            </span>
+                          )}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             </div>
 
