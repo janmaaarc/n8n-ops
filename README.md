@@ -15,8 +15,9 @@ A modern monitoring dashboard for n8n workflows built with React, TypeScript, an
   - Mobile-responsive drawer
 
 - **Dashboard Overview**
-  - Stats cards with weekly trend indicators (vs last week)
-  - 7-day execution history chart
+  - Clickable stats cards with navigation to filtered views
+  - Weekly trend indicators (vs last week)
+  - Execution history chart with time range selector (7d/14d/30d)
   - Recent executions feed
   - Quick workflow access
 
@@ -42,10 +43,12 @@ A modern monitoring dashboard for n8n workflows built with React, TypeScript, an
   - Click to view execution details
 
 - **User Experience**
+  - Command palette (Cmd/Ctrl+K) for quick navigation and actions
   - Keyboard shortcuts (R: refresh, /: search, ,: settings, D: dark mode, ?: help)
   - Toast notifications for actions
+  - Loading states on action buttons
   - Pagination for large lists
-  - Dark/light theme toggle
+  - Monochrome design theme (dark/light mode)
   - Configurable auto-refresh interval
   - Connection testing
   - Mobile-responsive design with touch support
@@ -175,12 +178,13 @@ npm run dev
 
 | Key | Action |
 |-----|--------|
+| `Cmd/Ctrl+K` | Open command palette |
 | `R` | Refresh data |
 | `/` | Focus search |
 | `,` | Open settings |
 | `D` | Toggle dark mode |
 | `?` | Show shortcuts |
-| `Esc` | Close modal |
+| `Esc` | Close modal/palette |
 
 ## Project Structure
 
@@ -191,13 +195,15 @@ src/
 │   │   ├── Sidebar.tsx       # Collapsible sidebar navigation
 │   │   ├── MainLayout.tsx    # Main layout wrapper with Outlet
 │   │   └── PageHeader.tsx    # Reusable page header component
+│   ├── CommandPalette.tsx    # Cmd+K command palette
 │   ├── LandingPage.tsx       # Landing page for unauthenticated users
 │   ├── AuthModal.tsx         # Sign in/sign up modal
 │   ├── WorkflowTable.tsx     # Sortable workflow table with stats
+│   ├── WorkflowList.tsx      # Compact workflow list (dashboard)
 │   ├── ExecutionTable.tsx    # Sortable execution history table
 │   ├── ExecutionFeed.tsx     # Recent executions list (dashboard)
-│   ├── StatCard.tsx          # Stats card with trend indicators
-│   ├── ExecutionChart.tsx    # 7-day execution history chart
+│   ├── StatCard.tsx          # Clickable stats card with trends
+│   ├── ExecutionChart.tsx    # Execution chart with time range
 │   ├── SettingsModal.tsx     # Settings modal (quick access)
 │   └── ...
 ├── pages/
@@ -214,6 +220,7 @@ src/
 │   ├── useN8n.ts             # API hooks (React Query)
 │   ├── useSettings.ts        # Settings management
 │   ├── useCredentials.ts     # Supabase credentials hook
+│   ├── useCommandPalette.ts  # Command palette state/logic
 │   ├── useMediaQuery.ts      # Responsive breakpoint detection
 │   └── ...
 ├── services/
