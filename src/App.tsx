@@ -2,7 +2,6 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { MainLayout } from './components/layout';
-import { ToastContainer, useToast } from './components/Toast';
 import { SettingsModal } from './components/SettingsModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { CommandPalette } from './components/CommandPalette';
@@ -42,7 +41,6 @@ const App: React.FC = () => {
 
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { settings, updateSettings, resetSettings } = useSettings();
-  const toast = useToast();
   const navigate = useNavigate();
   const commandPalette = useCommandPalette({
     onRefresh: () => window.location.reload(),
@@ -124,9 +122,6 @@ const App: React.FC = () => {
         isOpen={showShortcuts}
         onClose={() => setShowShortcuts(false)}
       />
-
-      {/* Toast Notifications */}
-      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismissToast} />
 
       {/* Command Palette */}
       <CommandPalette
