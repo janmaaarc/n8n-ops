@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Workflow as WorkflowType, Execution } from '../types';
-import { getStoredSettings } from '../hooks/useSettings';
+import { getN8nUrl } from '../lib/utils';
 
 interface WorkflowStats {
   totalExecutions: number;
@@ -30,11 +30,6 @@ interface DashboardWorkflowListProps {
   onToggleFavorite: (id: string) => void;
   maxItems?: number;
 }
-
-const getN8nUrl = (): string => {
-  const settings = getStoredSettings();
-  return settings.n8nUrl || import.meta.env.VITE_N8N_URL || '';
-};
 
 export const DashboardWorkflowList: React.FC<DashboardWorkflowListProps> = ({
   workflows,

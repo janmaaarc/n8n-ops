@@ -14,11 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { AuthModal } from './AuthModal';
-
-interface LandingPageProps {
-  darkMode: boolean;
-  toggleTheme: () => void;
-}
+import { useTheme } from '../contexts/ThemeContext';
 
 // Hook for detecting if element is in viewport
 const useInView = (threshold = 0.1) => {
@@ -122,7 +118,8 @@ const TouchButton: React.FC<TouchButtonProps> = ({
   );
 };
 
-export const LandingPage: React.FC<LandingPageProps> = ({ darkMode, toggleTheme }) => {
+export const LandingPage: React.FC = () => {
+  const { darkMode, toggleTheme } = useTheme();
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [headerScrolled, setHeaderScrolled] = useState(false);

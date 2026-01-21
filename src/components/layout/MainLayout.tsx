@@ -4,12 +4,7 @@ import { Sidebar, MobileMenuButton } from './Sidebar';
 import { MobileBottomNav } from '../MobileBottomNav';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 
-interface MainLayoutProps {
-  darkMode: boolean;
-  toggleTheme: () => void;
-}
-
-export const MainLayout: React.FC<MainLayoutProps> = ({ darkMode, toggleTheme }) => {
+export const MainLayout: React.FC = () => {
   const isMobile = useIsMobile();
 
   return (
@@ -22,7 +17,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ darkMode, toggleTheme })
         Skip to main content
       </a>
 
-      <Sidebar darkMode={darkMode} toggleTheme={toggleTheme} />
+      <Sidebar />
 
       {/* Main Content */}
       <main

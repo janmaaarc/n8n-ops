@@ -20,7 +20,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { Workflow as WorkflowType, WorkflowNode } from '../types';
-import { getStoredSettings } from '../hooks/useSettings';
+import { getN8nUrl } from '../lib/utils';
 import { exportWorkflowsToCSV, exportWorkflowsToJSON } from '../utils/export';
 
 // Get trigger info from workflow nodes
@@ -70,11 +70,6 @@ interface WorkflowListProps {
   onToggleFavorite: (id: string) => void;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
-
-const getN8nUrl = (): string => {
-  const settings = getStoredSettings();
-  return settings.n8nUrl || import.meta.env.VITE_N8N_URL || '';
-};
 
 type SortOption = 'name' | 'status' | 'nodes' | 'favorite';
 type FilterOption = 'all' | 'active' | 'inactive';

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, differenceInSeconds, subHours, subDays, isAfter } from 'date-fns';
 import type { Execution, Workflow } from '../types';
-import { getStoredSettings } from '../hooks/useSettings';
+import { getN8nUrl } from '../lib/utils';
 
 type TimeFilter = 'all' | '1h' | '24h' | '7d' | '30d';
 
@@ -52,11 +52,6 @@ interface ExecutionTableProps {
   onExecutionClick: (execution: Execution) => void;
   highlightId?: string | null;
 }
-
-const getN8nUrl = (): string => {
-  const settings = getStoredSettings();
-  return settings.n8nUrl || import.meta.env.VITE_N8N_URL || '';
-};
 
 const formatDuration = (startedAt: string, stoppedAt: string | null): string => {
   if (!stoppedAt) return 'Running...';

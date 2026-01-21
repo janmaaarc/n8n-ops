@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { ThemeToggle } from '../ThemeToggle';
 
@@ -72,14 +73,10 @@ const bottomNavItems: NavItem[] = [
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
-interface SidebarProps {
-  darkMode: boolean;
-  toggleTheme: () => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
+export const Sidebar: React.FC = () => {
   const { isMobileOpen, closeMobile } = useSidebar();
   const { user, signOut, isAuthenticated } = useAuth();
+  const { darkMode, toggleTheme } = useTheme();
   const location = useLocation();
 
   const handleSignOut = async () => {

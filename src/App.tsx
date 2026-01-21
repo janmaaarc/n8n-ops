@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { MainLayout } from './components/layout';
@@ -10,6 +10,7 @@ import { useCommandPalette } from './hooks/useCommandPalette';
 import { useSettings } from './hooks/useSettings';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { isSupabaseConfigured } from './lib/supabase';
 
 // Lazy load pages for code splitting
@@ -40,15 +41,8 @@ const PageLoader: React.FC = () => (
   </div>
 );
 
-const App: React.FC = () => {
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' ||
-        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
-    return false;
-  });
-
+const AppContent: React.FC = () => {
+  const { toggleTheme } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -58,18 +52,6 @@ const App: React.FC = () => {
   const commandPalette = useCommandPalette({
     onRefresh: () => window.location.reload(),
   });
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
-
-  const toggleTheme = () => setDarkMode((prev) => !prev);
 
   const handleCloseModals = () => {
     if (commandPalette.isOpen) {
@@ -103,14 +85,14 @@ const App: React.FC = () => {
 
   // Show landing page if Supabase is configured and user is not authenticated
   if (isSupabaseConfigured() && !isAuthenticated) {
-    return <LandingPage darkMode={darkMode} toggleTheme={toggleTheme} />;
+    return <LandingPage />;
   }
 
   return (
     <>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route element={<MainLayout darkMode={darkMode} toggleTheme={toggleTheme} />}>
+          <Route element={<MainLayout />}>
             {/* Main */}
             <Route path="/" element={<DashboardPage onShowSettings={() => setShowSettings(true)} />} />
             <Route path="/workflows" element={<WorkflowsPage />} />
@@ -164,5 +146,11 @@ const App: React.FC = () => {
     </>
   );
 };
+
+const App: React.FC = () => (
+  <ThemeProvider>
+    <AppContent />
+  </ThemeProvider>
+);
 
 export default App;

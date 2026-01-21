@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { RefreshCw, Webhook, Copy, Check, ExternalLink, Power, PowerOff, Globe, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useDebounce } from '../hooks/useDebounce';
+import { RefreshCw, Webhook, Copy, Check, ExternalLink, Power, PowerOff, Globe, Lock, ChevronLeft, ChevronRight, Search, Download } from 'lucide-react';
 import { PageHeader } from '../components/layout';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useWebhooks, type WebhookInfo } from '../hooks/useWebhooks';
@@ -8,6 +8,8 @@ import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../contexts/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useToast } from '../components/Toast';
+import { SkeletonStatCard, SkeletonCard } from '../components/Skeleton';
+import { getN8nUrl, copyToClipboard, exportToCSV } from '../lib/utils';
 
 const MethodBadge: React.FC<{ method: string }> = ({ method }) => {
   const colors: Record<string, string> = {
@@ -27,7 +29,13 @@ const MethodBadge: React.FC<{ method: string }> = ({ method }) => {
   );
 };
 
-const WebhookCard: React.FC<{ webhook: WebhookInfo; onCopy: (url: string) => void }> = ({ webhook, onCopy }) => {
+const WebhookCard: React.FC<{
+  webhook: WebhookInfo;
+  onCopy: (url: string) => void;
+  onCopyId: (id: string) => void;
+  copiedId: string | null;
+  n8nUrl: string;
+}> = ({ webhook, onCopy, onCopyId, copiedId, n8nUrl }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -98,13 +106,26 @@ const WebhookCard: React.FC<{ webhook: WebhookInfo; onCopy: (url: string) => voi
           >
             {copied ? <Check size={16} /> : <Copy size={16} />}
           </button>
-          <Link
-            to={`/workflows?highlight=${webhook.workflowId}`}
+          <button
+            onClick={() => onCopyId(webhook.workflowId)}
+            className={`p-2 rounded-lg transition-colors ${
+              copiedId === webhook.workflowId
+                ? 'bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400'
+                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700'
+            }`}
+            title="Copy workflow ID"
+          >
+            {copiedId === webhook.workflowId ? <Check size={16} /> : <span className="text-xs font-mono">ID</span>}
+          </button>
+          <a
+            href={`${n8nUrl}/workflow/${webhook.workflowId}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="p-2 bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-            title="View workflow"
+            title="Open in n8n"
           >
             <ExternalLink size={16} />
-          </Link>
+          </a>
         </div>
       </div>
     </div>
@@ -119,6 +140,10 @@ export const WebhooksPage: React.FC = () => {
   const toast = useToast();
   const [activePage, setActivePage] = useState(1);
   const [inactivePage, setInactivePage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const n8nUrl = getN8nUrl(settings);
 
   const refreshOptions = {
     autoRefresh: settings.autoRefresh,
@@ -140,8 +165,45 @@ export const WebhooksPage: React.FC = () => {
     toast.success('URL copied', url.length > 50 ? `${url.slice(0, 50)}...` : url);
   };
 
-  const activeWebhooks = webhooks.filter(w => w.workflowActive);
-  const inactiveWebhooks = webhooks.filter(w => !w.workflowActive);
+  const handleCopyId = useCallback(async (id: string) => {
+    const success = await copyToClipboard(id);
+    if (success) {
+      setCopiedId(id);
+      toast.success('Workflow ID copied');
+      setTimeout(() => setCopiedId(null), 2000);
+    } else {
+      toast.error('Failed to copy');
+    }
+  }, [toast]);
+
+  const handleExportCSV = useCallback(() => {
+    const data = webhooks.map(w => ({
+      workflowId: w.workflowId,
+      workflowName: w.workflowName,
+      nodeName: w.nodeName,
+      webhookUrl: w.webhookUrl,
+      httpMethod: w.httpMethod,
+      authentication: w.authentication || 'None',
+      active: w.workflowActive ? 'Yes' : 'No',
+    }));
+    exportToCSV(data, 'webhooks');
+    toast.success('Webhooks exported to CSV');
+  }, [webhooks, toast]);
+
+  // Filter webhooks by search query (debounced)
+  const filteredWebhooks = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return webhooks;
+    const query = debouncedSearchQuery.toLowerCase();
+    return webhooks.filter(w =>
+      w.workflowName.toLowerCase().includes(query) ||
+      w.nodeName.toLowerCase().includes(query) ||
+      w.webhookUrl.toLowerCase().includes(query) ||
+      w.httpMethod.toLowerCase().includes(query)
+    );
+  }, [webhooks, debouncedSearchQuery]);
+
+  const activeWebhooks = filteredWebhooks.filter(w => w.workflowActive);
+  const inactiveWebhooks = filteredWebhooks.filter(w => !w.workflowActive);
 
   const activeTotalPages = Math.ceil(activeWebhooks.length / ITEMS_PER_PAGE);
   const inactiveTotalPages = Math.ceil(inactiveWebhooks.length / ITEMS_PER_PAGE);
@@ -162,20 +224,56 @@ export const WebhooksPage: React.FC = () => {
         title="Webhooks"
         description="View all webhook endpoints in your workflows"
         actions={
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
-          >
-            <RefreshCw size={16} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                placeholder="Search webhooks..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setActivePage(1);
+                  setInactivePage(1);
+                }}
+                className="pl-9 pr-3 py-1.5 text-sm w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              />
+            </div>
+            {webhooks.length > 0 && (
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+                title="Export to CSV"
+              >
+                <Download size={16} />
+                Export
+              </button>
+            )}
+            <button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+            >
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+          </div>
         }
       />
 
       <ErrorBoundary>
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw size={24} className="animate-spin text-neutral-400" />
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+            </div>
+            <div className="grid gap-3">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           </div>
         ) : webhooks.length === 0 ? (
           <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-8 text-center">
@@ -260,6 +358,9 @@ export const WebhooksPage: React.FC = () => {
                       key={`${webhook.workflowId}-${index}`}
                       webhook={webhook}
                       onCopy={handleCopy}
+                      onCopyId={handleCopyId}
+                      copiedId={copiedId}
+                      n8nUrl={n8nUrl}
                     />
                   ))}
                 </div>
@@ -306,6 +407,9 @@ export const WebhooksPage: React.FC = () => {
                       key={`${webhook.workflowId}-${index}`}
                       webhook={webhook}
                       onCopy={handleCopy}
+                      onCopyId={handleCopyId}
+                      copiedId={copiedId}
+                      n8nUrl={n8nUrl}
                     />
                   ))}
                 </div>

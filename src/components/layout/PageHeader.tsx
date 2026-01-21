@@ -1,12 +1,17 @@
 import React from 'react';
+import { ThemeToggle } from '../ThemeToggle';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface PageHeaderProps {
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  showThemeToggle?: boolean;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions, showThemeToggle = true }) => {
+  const { darkMode, toggleTheme } = useTheme();
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div>
@@ -15,7 +20,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, acti
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{description}</p>
         )}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      <div className="flex items-center gap-2">
+        {showThemeToggle && (
+          <ThemeToggle darkMode={darkMode} toggleTheme={toggleTheme} />
+        )}
+        {actions}
+      </div>
     </div>
   );
 };

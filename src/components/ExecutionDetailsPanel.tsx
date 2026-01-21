@@ -1,12 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, XCircle, Clock, Loader2, Copy, Check, ExternalLink } from 'lucide-react';
 import type { Execution } from '../types';
-import { getStoredSettings } from '../hooks/useSettings';
-
-const getN8nUrl = (): string => {
-  const settings = getStoredSettings();
-  return settings.n8nUrl || import.meta.env.VITE_N8N_URL || '';
-};
+import { getN8nUrl } from '../lib/utils';
 
 interface ExecutionDetailsPanelProps {
   execution: Execution | null;

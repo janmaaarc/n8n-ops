@@ -23,7 +23,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { Workflow as WorkflowType, Execution, WorkflowNode } from '../types';
-import { getStoredSettings } from '../hooks/useSettings';
+import { getN8nUrl } from '../lib/utils';
 import { exportWorkflowsToCSV, exportWorkflowsToJSON } from '../utils/export';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -94,11 +94,6 @@ interface WorkflowTableProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
   highlightId?: string | null;
 }
-
-const getN8nUrl = (): string => {
-  const settings = getStoredSettings();
-  return settings.n8nUrl || import.meta.env.VITE_N8N_URL || '';
-};
 
 type SortColumn = 'name' | 'status' | 'lastExecution' | 'executions' | 'successRate' | 'trigger' | 'favorite';
 type SortDirection = 'asc' | 'desc';

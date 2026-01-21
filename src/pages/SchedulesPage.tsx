@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { RefreshCw, Calendar, Clock, ExternalLink, Power, PowerOff, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useDebounce } from '../hooks/useDebounce';
+import { RefreshCw, Calendar, Clock, ExternalLink, Power, PowerOff, ChevronLeft, ChevronRight, Search, Copy, Download, Check } from 'lucide-react';
 import { PageHeader } from '../components/layout';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSchedules, type ScheduleInfo } from '../hooks/useSchedules';
@@ -8,6 +8,8 @@ import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../contexts/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useToast } from '../components/Toast';
+import { SkeletonStatCard, SkeletonList } from '../components/Skeleton';
+import { getN8nUrl, copyToClipboard, exportToCSV } from '../lib/utils';
 
 const formatSchedule = (schedule: ScheduleInfo): string => {
   if (schedule.cronExpression) {
@@ -79,6 +81,10 @@ export const SchedulesPage: React.FC = () => {
   const toast = useToast();
   const [activePage, setActivePage] = useState(1);
   const [inactivePage, setInactivePage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const n8nUrl = getN8nUrl(settings);
 
   const refreshOptions = {
     autoRefresh: settings.autoRefresh,
@@ -96,8 +102,43 @@ export const SchedulesPage: React.FC = () => {
     toast.info('Refreshing schedules...');
   };
 
-  const activeSchedules = schedules.filter(s => s.workflowActive);
-  const inactiveSchedules = schedules.filter(s => !s.workflowActive);
+  const handleCopyId = useCallback(async (id: string) => {
+    const success = await copyToClipboard(id);
+    if (success) {
+      setCopiedId(id);
+      toast.success('Workflow ID copied');
+      setTimeout(() => setCopiedId(null), 2000);
+    } else {
+      toast.error('Failed to copy');
+    }
+  }, [toast]);
+
+  const handleExportCSV = useCallback(() => {
+    const data = schedules.map(s => ({
+      workflowId: s.workflowId,
+      workflowName: s.workflowName,
+      nodeName: s.nodeName,
+      nodeType: getNodeTypeLabel(s.nodeType),
+      schedule: formatSchedule(s),
+      active: s.workflowActive ? 'Yes' : 'No',
+    }));
+    exportToCSV(data, 'schedules');
+    toast.success('Schedules exported to CSV');
+  }, [schedules, toast]);
+
+  // Filter schedules by search query (debounced)
+  const filteredSchedules = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return schedules;
+    const query = debouncedSearchQuery.toLowerCase();
+    return schedules.filter(s =>
+      s.workflowName.toLowerCase().includes(query) ||
+      s.nodeName.toLowerCase().includes(query) ||
+      formatSchedule(s).toLowerCase().includes(query)
+    );
+  }, [schedules, debouncedSearchQuery]);
+
+  const activeSchedules = filteredSchedules.filter(s => s.workflowActive);
+  const inactiveSchedules = filteredSchedules.filter(s => !s.workflowActive);
 
   const activeTotalPages = Math.ceil(activeSchedules.length / ITEMS_PER_PAGE);
   const inactiveTotalPages = Math.ceil(inactiveSchedules.length / ITEMS_PER_PAGE);
@@ -118,20 +159,51 @@ export const SchedulesPage: React.FC = () => {
         title="Schedules"
         description="View all scheduled workflow triggers"
         actions={
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
-          >
-            <RefreshCw size={16} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                placeholder="Search schedules..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setActivePage(1);
+                  setInactivePage(1);
+                }}
+                className="pl-9 pr-3 py-1.5 text-sm w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              />
+            </div>
+            {schedules.length > 0 && (
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+                title="Export to CSV"
+              >
+                <Download size={16} />
+                Export
+              </button>
+            )}
+            <button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+            >
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+          </div>
         }
       />
 
       <ErrorBoundary>
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw size={24} className="animate-spin text-neutral-400" />
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+            </div>
+            <SkeletonList items={5} />
           </div>
         ) : schedules.length === 0 ? (
           <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-8 text-center">
@@ -234,19 +306,32 @@ export const SchedulesPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        <div className="text-right mr-2">
                           <p className="text-sm font-mono text-neutral-900 dark:text-white">
                             {formatSchedule(schedule)}
                           </p>
                         </div>
-                        <Link
-                          to={`/workflows?highlight=${schedule.workflowId}`}
+                        <button
+                          onClick={() => handleCopyId(schedule.workflowId)}
                           className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors"
-                          title="View workflow"
+                          title="Copy workflow ID"
+                        >
+                          {copiedId === schedule.workflowId ? (
+                            <Check size={16} className="text-green-500" />
+                          ) : (
+                            <Copy size={16} />
+                          )}
+                        </button>
+                        <a
+                          href={`${n8nUrl}/workflow/${schedule.workflowId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors"
+                          title="Open in n8n"
                         >
                           <ExternalLink size={16} />
-                        </Link>
+                        </a>
                       </div>
                     </div>
                   ))}
@@ -312,20 +397,33 @@ export const SchedulesPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        <div className="text-right mr-2">
                           <p className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
                             {formatSchedule(schedule)}
                           </p>
                           <p className="text-xs text-neutral-400 dark:text-neutral-500">Workflow inactive</p>
                         </div>
-                        <Link
-                          to={`/workflows?highlight=${schedule.workflowId}`}
+                        <button
+                          onClick={() => handleCopyId(schedule.workflowId)}
                           className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors"
-                          title="View workflow"
+                          title="Copy workflow ID"
+                        >
+                          {copiedId === schedule.workflowId ? (
+                            <Check size={16} className="text-green-500" />
+                          ) : (
+                            <Copy size={16} />
+                          )}
+                        </button>
+                        <a
+                          href={`${n8nUrl}/workflow/${schedule.workflowId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors"
+                          title="Open in n8n"
                         >
                           <ExternalLink size={16} />
-                        </Link>
+                        </a>
                       </div>
                     </div>
                   ))}
