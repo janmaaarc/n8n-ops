@@ -5,12 +5,10 @@ A modern monitoring dashboard for n8n workflows built with React, TypeScript, an
 ## Features
 
 - **Sidebar Navigation**
-  - Dashboard - Overview stats, charts, and recent activity
-  - Workflows - Full workflow management with search/filter
-  - Executions - Execution history and details
-  - Credentials - View n8n credential metadata
-  - Variables - Environment variables
-  - Settings - Connection and preferences
+  - **Main**: Dashboard, Workflows, Executions, Credentials, Variables
+  - **Monitoring**: Error Log, Performance, Usage Reports, Queue Monitor
+  - **Operations**: Schedules, Webhooks, Alerts
+  - **Admin**: API Keys, Backups, Settings
   - Collapsible sidebar (240px expanded, 64px collapsed)
   - Mobile-responsive drawer
 
@@ -41,6 +39,65 @@ A modern monitoring dashboard for n8n workflows built with React, TypeScript, an
   - Sort by any column (ascending/descending)
   - Error tracking with stack traces
   - Click to view execution details
+
+- **Error Log**
+  - Filter failed executions by time period (1h, 24h, 7d, 30d, all)
+  - View error messages and stack traces
+  - Bulk retry failed workflows
+  - Select all/individual errors for batch operations
+  - Pagination with configurable items per page
+
+- **Performance Metrics**
+  - Execution time trends (line chart)
+  - Per-workflow performance stats (avg, min, max duration)
+  - Success rate tracking
+  - Trend indicators (up/down/neutral)
+  - Export metrics to CSV
+
+- **Usage Reports**
+  - Execution counts by day/week/month (bar chart)
+  - Workflow distribution (pie chart with legend)
+  - Most active workflows ranking with distribution bars
+  - Export full execution report to CSV
+
+- **Queue Monitor**
+  - Real-time view of running executions
+  - Waiting queue with position tracking
+  - Auto-refresh every 5 seconds
+  - Recently completed executions feed
+  - Duration tracking for active executions
+
+- **Schedules**
+  - View all scheduled workflow triggers
+  - Parse cron expressions and intervals
+  - Active/inactive status indicators
+  - Link to parent workflow
+
+- **Webhooks**
+  - List all webhook endpoints across workflows
+  - Copy webhook URL to clipboard
+  - HTTP method badges (GET, POST, PUT, DELETE)
+  - Authentication type indicators
+  - Pagination for active/inactive sections
+
+- **Alerts**
+  - Configure alert rules (consecutive failures, error rate thresholds)
+  - Browser notifications support
+  - Webhook notifications for external integrations
+  - Alert history log
+  - Enable/disable individual rules
+
+- **Backups**
+  - Export individual workflows as JSON
+  - Bulk export all workflows
+  - Import workflow from JSON file
+  - Search and filter workflows
+  - Pagination for large workflow lists
+
+- **API Keys (Credentials)**
+  - View credential metadata (secrets never exposed)
+  - Group credentials by type
+  - Security notice about API limitations
 
 - **User Experience**
   - Command palette (Cmd/Ctrl+K) for quick navigation and actions
@@ -207,12 +264,21 @@ src/
 │   ├── SettingsModal.tsx     # Settings modal (quick access)
 │   └── ...
 ├── pages/
-│   ├── DashboardPage.tsx     # Dashboard overview
-│   ├── WorkflowsPage.tsx     # Workflows management
-│   ├── ExecutionsPage.tsx    # Execution history
-│   ├── CredentialsPage.tsx   # n8n credentials list
-│   ├── VariablesPage.tsx     # Environment variables
-│   └── SettingsPage.tsx      # Full settings page
+│   ├── DashboardPage.tsx        # Dashboard overview
+│   ├── WorkflowsPage.tsx        # Workflows management
+│   ├── ExecutionsPage.tsx       # Execution history
+│   ├── CredentialsPage.tsx      # n8n credentials list
+│   ├── VariablesPage.tsx        # Environment variables
+│   ├── ErrorLogPage.tsx         # Failed executions log
+│   ├── PerformanceMetricsPage.tsx # Performance analytics
+│   ├── UsageReportsPage.tsx     # Usage analytics
+│   ├── QueueMonitorPage.tsx     # Real-time queue monitoring
+│   ├── SchedulesPage.tsx        # Scheduled triggers
+│   ├── WebhooksPage.tsx         # Webhook endpoints
+│   ├── AlertsPage.tsx           # Alert configuration
+│   ├── ApiKeysPage.tsx          # Credentials metadata
+│   ├── BackupsPage.tsx          # Workflow backup/restore
+│   └── SettingsPage.tsx         # Full settings page
 ├── contexts/
 │   ├── AuthContext.tsx       # Authentication context
 │   └── SidebarContext.tsx    # Sidebar collapse state
@@ -222,7 +288,10 @@ src/
 │   ├── useCredentials.ts     # Supabase credentials hook
 │   ├── useCommandPalette.ts  # Command palette state/logic
 │   ├── useMediaQuery.ts      # Responsive breakpoint detection
-│   └── ...
+│   ├── useSchedules.ts       # Parse schedule nodes from workflows
+│   ├── useWebhooks.ts        # Parse webhook nodes from workflows
+│   ├── useAlerts.ts          # Alert rules management (localStorage)
+│   └── useFavorites.ts       # Workflow favorites persistence
 ├── services/
 │   └── n8n.ts                # n8n API wrapper
 ├── lib/
