@@ -16,8 +16,6 @@ import { isSupabaseConfigured } from './lib/supabase';
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage').then(m => ({ default: m.WorkflowsPage })));
 const ExecutionsPage = lazy(() => import('./pages/ExecutionsPage').then(m => ({ default: m.ExecutionsPage })));
-const CredentialsPage = lazy(() => import('./pages/CredentialsPage').then(m => ({ default: m.CredentialsPage })));
-const VariablesPage = lazy(() => import('./pages/VariablesPage').then(m => ({ default: m.VariablesPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
 // Monitoring Pages
@@ -117,8 +115,6 @@ const App: React.FC = () => {
             <Route path="/" element={<DashboardPage onShowSettings={() => setShowSettings(true)} />} />
             <Route path="/workflows" element={<WorkflowsPage />} />
             <Route path="/executions" element={<ExecutionsPage />} />
-            <Route path="/credentials" element={<CredentialsPage />} />
-            <Route path="/variables" element={<VariablesPage />} />
 
             {/* Monitoring */}
             <Route path="/errors" element={<ErrorLogPage />} />

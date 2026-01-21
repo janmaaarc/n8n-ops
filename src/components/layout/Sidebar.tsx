@@ -5,7 +5,6 @@ import {
   Workflow,
   Activity,
   Key,
-  Variable,
   Settings,
   LogOut,
   X,
@@ -41,8 +40,6 @@ const navSections: NavSection[] = [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
       { icon: Workflow, label: 'Workflows', path: '/workflows' },
       { icon: Activity, label: 'Executions', path: '/executions' },
-      { icon: Key, label: 'Credentials', path: '/credentials' },
-      { icon: Variable, label: 'Variables', path: '/variables' },
     ],
   },
   {
