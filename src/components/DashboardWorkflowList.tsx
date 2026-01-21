@@ -101,103 +101,128 @@ export const DashboardWorkflowList: React.FC<DashboardWorkflowListProps> = ({
   }
 
   return (
-    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 divide-y divide-neutral-200 dark:divide-neutral-800">
-      {sortedWorkflows.map((workflow) => {
-        const stats = workflowStatsMap.get(workflow.id) || { totalExecutions: 0, successRate: 0 };
+    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50">
+            <th className="w-8 px-3 py-2"></th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400">Name</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400">Status</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400">Success</th>
+            <th className="w-24 px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+          {sortedWorkflows.map((workflow) => {
+            const stats = workflowStatsMap.get(workflow.id) || { totalExecutions: 0, successRate: 0 };
 
-        return (
-          <div
-            key={workflow.id}
-            className="px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              {/* Favorite */}
-              <button
-                onClick={() => onToggleFavorite(workflow.id)}
-                className={`flex-shrink-0 ${
-                  favorites.has(workflow.id)
-                    ? 'text-amber-500'
-                    : 'text-neutral-300 dark:text-neutral-600 hover:text-amber-400'
-                }`}
+            return (
+              <tr
+                key={workflow.id}
+                className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
               >
-                <Star size={14} fill={favorites.has(workflow.id) ? 'currentColor' : 'none'} />
-              </button>
+                {/* Favorite */}
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => onToggleFavorite(workflow.id)}
+                    className={`flex-shrink-0 ${
+                      favorites.has(workflow.id)
+                        ? 'text-amber-500'
+                        : 'text-neutral-300 dark:text-neutral-600 hover:text-amber-400'
+                    }`}
+                  >
+                    <Star size={14} fill={favorites.has(workflow.id) ? 'currentColor' : 'none'} />
+                  </button>
+                </td>
 
-              {/* Name and Stats */}
-              <button
-                onClick={() => navigate(`/workflows?highlight=${workflow.id}`)}
-                className="min-w-0 flex-1 text-left flex items-center gap-2"
-              >
-                <span className="text-sm font-medium text-neutral-900 dark:text-white truncate hover:underline">
-                  {workflow.name}
-                </span>
-                <span
-                  className={`flex-shrink-0 text-xs px-1.5 py-0.5 rounded ${
-                    workflow.active
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                      : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
-                  }`}
-                >
-                  {workflow.active ? 'Active' : 'Inactive'}
-                </span>
-                {stats.totalExecutions > 0 && (
-                  <span className="flex-shrink-0 text-xs text-neutral-500 dark:text-neutral-400 tabular-nums">
-                    {stats.successRate.toFixed(0)}%
+                {/* Name */}
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => navigate(`/workflows?highlight=${workflow.id}`)}
+                    className="text-sm font-medium text-neutral-900 dark:text-white truncate hover:underline text-left"
+                  >
+                    {workflow.name}
+                  </button>
+                </td>
+
+                {/* Status */}
+                <td className="px-3 py-2">
+                  <span
+                    className={`inline-flex text-xs px-1.5 py-0.5 rounded ${
+                      workflow.active
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                        : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                    }`}
+                  >
+                    {workflow.active ? 'Active' : 'Inactive'}
                   </span>
-                )}
-              </button>
+                </td>
 
-              {/* Actions */}
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-              {/* Manual Trigger */}
-              {workflow.active && onTrigger && (
-                <button
-                  onClick={() => onTrigger(workflow)}
-                  disabled={triggerLoadingId === workflow.id}
-                  className="p-1.5 rounded text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Run workflow"
-                >
-                  {triggerLoadingId === workflow.id ? (
-                    <Loader2 size={14} className="animate-spin" />
+                {/* Success Rate */}
+                <td className="px-3 py-2 text-right">
+                  {stats.totalExecutions > 0 ? (
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400 tabular-nums">
+                      {stats.successRate.toFixed(0)}%
+                    </span>
                   ) : (
-                    <PlayCircle size={14} />
+                    <span className="text-xs text-neutral-400 dark:text-neutral-600">—</span>
                   )}
-                </button>
-              )}
+                </td>
 
-              <button
-                onClick={() => onToggleActive?.(workflow)}
-                disabled={toggleLoadingId === workflow.id}
-                className={`p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  workflow.active
-                    ? 'text-amber-600 dark:text-amber-500'
-                    : 'text-emerald-600 dark:text-emerald-500'
-                }`}
-                title={workflow.active ? 'Deactivate' : 'Activate'}
-              >
-                {toggleLoadingId === workflow.id ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : workflow.active ? (
-                  <Pause size={14} />
-                ) : (
-                  <Play size={14} />
-                )}
-              </button>
+                {/* Actions */}
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-end gap-0.5">
+                    {/* Manual Trigger */}
+                    {workflow.active && onTrigger && (
+                      <button
+                        onClick={() => onTrigger(workflow)}
+                        disabled={triggerLoadingId === workflow.id}
+                        className="p-1.5 rounded text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Run workflow"
+                      >
+                        {triggerLoadingId === workflow.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <PlayCircle size={14} />
+                        )}
+                      </button>
+                    )}
 
-              <a
-                href={`${getN8nUrl()}/workflow/${workflow.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1.5 rounded text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:text-neutral-500 dark:hover:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
-                title="Open in n8n"
-              >
-                <ExternalLink size={14} />
-              </a>
-            </div>
-          </div>
-        </div>
-        );
-      })}
+                    <button
+                      onClick={() => onToggleActive?.(workflow)}
+                      disabled={toggleLoadingId === workflow.id}
+                      className={`p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        workflow.active
+                          ? 'text-amber-600 dark:text-amber-500'
+                          : 'text-emerald-600 dark:text-emerald-500'
+                      }`}
+                      title={workflow.active ? 'Deactivate' : 'Activate'}
+                    >
+                      {toggleLoadingId === workflow.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : workflow.active ? (
+                        <Pause size={14} />
+                      ) : (
+                        <Play size={14} />
+                      )}
+                    </button>
+
+                    <a
+                      href={`${getN8nUrl()}/workflow/${workflow.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:text-neutral-500 dark:hover:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                      title="Open in n8n"
+                    >
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
       {/* View All Link */}
       {workflows.length > maxItems && (
