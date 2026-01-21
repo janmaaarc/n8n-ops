@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Play,
   Pause,
@@ -10,11 +10,17 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import type { Workflow as WorkflowType } from '../types';
+import type { Workflow as WorkflowType, Execution } from '../types';
 import { getStoredSettings } from '../hooks/useSettings';
+
+interface WorkflowStats {
+  totalExecutions: number;
+  successRate: number;
+}
 
 interface DashboardWorkflowListProps {
   workflows: WorkflowType[];
+  executions?: Execution[];
   isLoading?: boolean;
   onToggleActive?: (workflow: WorkflowType) => void;
   onTrigger?: (workflow: WorkflowType) => void;
@@ -32,6 +38,7 @@ const getN8nUrl = (): string => {
 
 export const DashboardWorkflowList: React.FC<DashboardWorkflowListProps> = ({
   workflows,
+  executions = [],
   isLoading,
   onToggleActive,
   onTrigger,
@@ -43,8 +50,21 @@ export const DashboardWorkflowList: React.FC<DashboardWorkflowListProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  // Calculate stats per workflow
+  const workflowStatsMap = useMemo(() => {
+    const map = new Map<string, WorkflowStats>();
+    workflows.forEach((w) => {
+      const workflowExecutions = executions.filter((e) => e.workflowId === w.id);
+      const totalExecutions = workflowExecutions.length;
+      const successfulExecutions = workflowExecutions.filter((e) => e.status === 'success').length;
+      const successRate = totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 0;
+      map.set(w.id, { totalExecutions, successRate });
+    });
+    return map;
+  }, [workflows, executions]);
+
   // Sort: favorites first, then by name
-  const sortedWorkflows = React.useMemo(() => {
+  const sortedWorkflows = useMemo(() => {
     return [...workflows].sort((a, b) => {
       const aFav = favorites.has(a.id) ? 1 : 0;
       const bFav = favorites.has(b.id) ? 1 : 0;
@@ -82,43 +102,53 @@ export const DashboardWorkflowList: React.FC<DashboardWorkflowListProps> = ({
 
   return (
     <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 divide-y divide-neutral-200 dark:divide-neutral-800">
-      {sortedWorkflows.map((workflow) => (
-        <div
-          key={workflow.id}
-          className="px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            {/* Favorite */}
-            <button
-              onClick={() => onToggleFavorite(workflow.id)}
-              className={`flex-shrink-0 ${
-                favorites.has(workflow.id)
-                  ? 'text-amber-500'
-                  : 'text-neutral-300 dark:text-neutral-600 hover:text-amber-400'
-              }`}
-            >
-              <Star size={14} fill={favorites.has(workflow.id) ? 'currentColor' : 'none'} />
-            </button>
+      {sortedWorkflows.map((workflow) => {
+        const stats = workflowStatsMap.get(workflow.id) || { totalExecutions: 0, successRate: 0 };
 
-            {/* Status dot */}
-            <div
-              className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                workflow.active ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'
-              }`}
-            />
+        return (
+          <div
+            key={workflow.id}
+            className="px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              {/* Favorite */}
+              <button
+                onClick={() => onToggleFavorite(workflow.id)}
+                className={`flex-shrink-0 ${
+                  favorites.has(workflow.id)
+                    ? 'text-amber-500'
+                    : 'text-neutral-300 dark:text-neutral-600 hover:text-amber-400'
+                }`}
+              >
+                <Star size={14} fill={favorites.has(workflow.id) ? 'currentColor' : 'none'} />
+              </button>
 
-            {/* Name */}
-            <button
-              onClick={() => navigate(`/workflows?highlight=${workflow.id}`)}
-              className="min-w-0 flex-1 text-left"
-            >
-              <span className="text-sm font-medium text-neutral-900 dark:text-white truncate block hover:underline">
-                {workflow.name}
-              </span>
-            </button>
+              {/* Name and Stats */}
+              <button
+                onClick={() => navigate(`/workflows?highlight=${workflow.id}`)}
+                className="min-w-0 flex-1 text-left flex items-center gap-2"
+              >
+                <span className="text-sm font-medium text-neutral-900 dark:text-white truncate hover:underline">
+                  {workflow.name}
+                </span>
+                <span
+                  className={`flex-shrink-0 text-xs px-1.5 py-0.5 rounded ${
+                    workflow.active
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                      : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                  }`}
+                >
+                  {workflow.active ? 'Active' : 'Inactive'}
+                </span>
+                {stats.totalExecutions > 0 && (
+                  <span className="flex-shrink-0 text-xs text-neutral-500 dark:text-neutral-400 tabular-nums">
+                    {stats.successRate.toFixed(0)}%
+                  </span>
+                )}
+              </button>
 
-            {/* Actions */}
-            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {/* Actions */}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
               {/* Manual Trigger */}
               {workflow.active && onTrigger && (
                 <button
@@ -166,7 +196,8 @@ export const DashboardWorkflowList: React.FC<DashboardWorkflowListProps> = ({
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {/* View All Link */}
       {workflows.length > maxItems && (

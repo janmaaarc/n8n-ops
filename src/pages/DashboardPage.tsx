@@ -188,33 +188,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onShowSettings }) 
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Workflows */}
-        <Section title="Recent Workflows">
-          <ErrorBoundary>
-            <DashboardWorkflowList
-              workflows={workflows || []}
-              isLoading={workflowsLoading}
-              onToggleActive={handleToggleWorkflow}
-              onTrigger={handleTriggerWorkflow}
-              toggleLoadingId={toggleWorkflow.isPending ? toggleWorkflow.variables?.id : undefined}
-              triggerLoadingId={triggerWorkflow.isPending ? triggerWorkflow.variables : undefined}
-              favorites={favorites}
-              onToggleFavorite={toggleFavorite}
-              maxItems={6}
-            />
-          </ErrorBoundary>
-        </Section>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Workflows - 3/5 */}
+        <div className="lg:col-span-3">
+          <Section title="Recent Workflows">
+            <ErrorBoundary>
+              <DashboardWorkflowList
+                workflows={workflows || []}
+                executions={executions || []}
+                isLoading={workflowsLoading}
+                onToggleActive={handleToggleWorkflow}
+                onTrigger={handleTriggerWorkflow}
+                toggleLoadingId={toggleWorkflow.isPending ? toggleWorkflow.variables?.id : undefined}
+                triggerLoadingId={triggerWorkflow.isPending ? triggerWorkflow.variables : undefined}
+                favorites={favorites}
+                onToggleFavorite={toggleFavorite}
+                maxItems={6}
+              />
+            </ErrorBoundary>
+          </Section>
+        </div>
 
-        {/* Executions */}
-        <div className="space-y-6">
+        {/* Executions - 2/5 */}
+        <div className="lg:col-span-2 space-y-6">
           <Section title="Recent Executions">
             <ErrorBoundary>
               <ExecutionFeed
                 executions={recentExecutions}
                 isLoading={executionsLoading}
                 onExecutionClick={handleExecutionClick}
-                itemsPerPage={6}
+                itemsPerPage={7}
                 showFilter={false}
                 showPagination={false}
               />
