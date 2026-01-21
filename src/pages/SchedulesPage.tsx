@@ -20,26 +20,39 @@ const formatSchedule = (schedule: ScheduleInfo): string => {
   }
 
   if (schedule.rule) {
-    const { mode, hour, minute, weekdays } = schedule.rule;
+    const { mode, hour, minute, weekdays, field, minutesInterval } = schedule.rule;
     const time = hour !== undefined && minute !== undefined
       ? `at ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
       : '';
 
+    // Handle custom interval format with field and minutesInterval
+    if (field === 'minutes' && minutesInterval !== undefined) {
+      return `Every ${minutesInterval} minute${minutesInterval !== 1 ? 's' : ''}`;
+    }
+    if (field === 'hours' && minutesInterval !== undefined) {
+      return `Every ${minutesInterval} hour${minutesInterval !== 1 ? 's' : ''}`;
+    }
+
     if (mode === 'days') {
-      return `Daily ${time}`;
+      return `Daily ${time}`.trim();
     }
     if (mode === 'weeks' && weekdays) {
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const days = weekdays.map(d => dayNames[d]).join(', ');
-      return `Weekly on ${days} ${time}`;
+      return `Weekly on ${days} ${time}`.trim();
     }
     if (mode === 'hours') {
-      return `Every hour ${minute !== undefined ? `at :${String(minute).padStart(2, '0')}` : ''}`;
+      return `Every hour ${minute !== undefined ? `at :${String(minute).padStart(2, '0')}` : ''}`.trim();
     }
     if (mode === 'minutes') {
-      return 'Every minute';
+      return minutesInterval ? `Every ${minutesInterval} minute${minutesInterval !== 1 ? 's' : ''}` : 'Every minute';
     }
-    return mode;
+
+    // Ensure we always return a string
+    if (typeof mode === 'string') {
+      return mode;
+    }
+    return 'Custom schedule';
   }
 
   return 'Unknown schedule';

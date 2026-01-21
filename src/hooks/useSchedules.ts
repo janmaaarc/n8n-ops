@@ -18,6 +18,8 @@ export interface ScheduleInfo {
     hour?: number;
     minute?: number;
     weekdays?: number[];
+    field?: string;
+    minutesInterval?: number;
   };
 }
 
@@ -54,11 +56,28 @@ const parseScheduleNode = (workflow: Workflow, node: WorkflowNode): ScheduleInfo
     let rule: ScheduleInfo['rule'] | undefined;
     if (params.rule) {
       const ruleParams = params.rule as Record<string, unknown>;
+
+      // Handle interval which could be a string or an object with {field, minutesInterval}
+      let mode = 'days';
+      let field: string | undefined;
+      let minutesInterval: number | undefined;
+
+      if (typeof ruleParams.interval === 'string') {
+        mode = ruleParams.interval;
+      } else if (ruleParams.interval && typeof ruleParams.interval === 'object') {
+        const intervalObj = ruleParams.interval as { field?: string; minutesInterval?: number };
+        mode = intervalObj.field || 'custom';
+        field = intervalObj.field;
+        minutesInterval = intervalObj.minutesInterval;
+      }
+
       rule = {
-        mode: (ruleParams.interval as string) || 'days',
+        mode,
         hour: ruleParams.hour as number,
         minute: ruleParams.minute as number,
         weekdays: ruleParams.weekdays as number[],
+        field,
+        minutesInterval,
       };
     }
 
