@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { n8nApi } from '../services/n8n';
-import type { Workflow, Execution, DashboardStats, Tag, Credential, Variable } from '../types';
+import type { Workflow, Execution, DashboardStats } from '../types';
 
 interface RefreshOptions {
   autoRefresh?: boolean;

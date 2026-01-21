@@ -32,7 +32,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { settings, updateSettings, resetSettings } = useSettings();
   const toast = useToast();
   const navigate = useNavigate();
