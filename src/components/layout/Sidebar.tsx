@@ -8,8 +8,6 @@ import {
   Variable,
   Settings,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
   X,
   Menu,
 } from 'lucide-react';
@@ -42,7 +40,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
-  const { isCollapsed, isMobileOpen, toggleCollapse, closeMobile } = useSidebar();
+  const { isCollapsed, isMobileOpen, closeMobile } = useSidebar();
   const { user, signOut, isAuthenticated } = useAuth();
   const location = useLocation();
 
@@ -129,13 +127,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
         )}
       </div>
 
-      {/* Collapse Toggle (Desktop) */}
-      <button
-        onClick={toggleCollapse}
-        className="hidden md:flex absolute -right-3 top-6 w-6 h-6 items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-      >
-        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-      </button>
     </>
   );
 
