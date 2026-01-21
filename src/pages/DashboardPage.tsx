@@ -1,11 +1,11 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Workflow, Play, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { PageHeader } from '../components/layout';
 import { StatCard } from '../components/StatCard';
 import { Section } from '../components/Section';
 import { ExecutionFeed } from '../components/ExecutionFeed';
-import { WorkflowList } from '../components/WorkflowList';
+import { DashboardWorkflowList } from '../components/DashboardWorkflowList';
 import { ExecutionDetailsPanel } from '../components/ExecutionDetailsPanel';
 import { ExecutionChart } from '../components/ExecutionChart';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -24,7 +24,6 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onShowSettings }) => {
   const [selectedExecution, setSelectedExecution] = React.useState<Execution | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const { isAuthenticated } = useAuth();
@@ -104,8 +103,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onShowSettings }) 
     })) || [];
   }, [executions, workflowNameMap]);
 
-  const recentExecutions = enrichedExecutions.slice(0, 10);
-  const errorExecutions = enrichedExecutions.filter(e => e.status === 'error').slice(0, 5);
+  const recentExecutions = enrichedExecutions.slice(0, 12);
+  const errorExecutions = enrichedExecutions.filter(e => e.status === 'error').slice(0, 4);
 
   return (
     <>
@@ -191,27 +190,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onShowSettings }) 
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Workflows */}
-        <div className="lg:col-span-2">
-          <Section title="Workflows">
-            <ErrorBoundary>
-              <WorkflowList
-                workflows={workflows || []}
-                isLoading={workflowsLoading}
-                onToggleActive={handleToggleWorkflow}
-                onTrigger={handleTriggerWorkflow}
-                toggleLoadingId={toggleWorkflow.isPending ? toggleWorkflow.variables?.id : undefined}
-                triggerLoadingId={triggerWorkflow.isPending ? triggerWorkflow.variables : undefined}
-                favorites={favorites}
-                onToggleFavorite={toggleFavorite}
-                searchInputRef={searchInputRef}
-              />
-            </ErrorBoundary>
-          </Section>
-        </div>
+        <Section title="Workflows">
+          <ErrorBoundary>
+            <DashboardWorkflowList
+              workflows={workflows || []}
+              isLoading={workflowsLoading}
+              onToggleActive={handleToggleWorkflow}
+              onTrigger={handleTriggerWorkflow}
+              toggleLoadingId={toggleWorkflow.isPending ? toggleWorkflow.variables?.id : undefined}
+              triggerLoadingId={triggerWorkflow.isPending ? triggerWorkflow.variables : undefined}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              maxItems={6}
+            />
+          </ErrorBoundary>
+        </Section>
 
-        {/* Sidebar */}
+        {/* Executions */}
         <div className="space-y-6">
           <Section title="Recent Executions">
             <ErrorBoundary>
@@ -219,6 +216,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onShowSettings }) 
                 executions={recentExecutions}
                 isLoading={executionsLoading}
                 onExecutionClick={handleExecutionClick}
+                itemsPerPage={6}
+                showFilter={false}
               />
             </ErrorBoundary>
           </Section>
@@ -230,6 +229,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onShowSettings }) 
                   executions={errorExecutions}
                   onExecutionClick={handleExecutionClick}
                   showFilter={false}
+                  itemsPerPage={4}
                 />
               </ErrorBoundary>
             </Section>
