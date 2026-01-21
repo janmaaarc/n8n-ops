@@ -28,7 +28,7 @@ export const TouchRipple: React.FC<TouchRippleProps> = ({
   const colorClasses = {
     light: 'bg-white/30',
     dark: 'bg-black/10',
-    primary: 'bg-indigo-500/30',
+    primary: 'bg-neutral-500/30',
   };
 
   const createRipple = useCallback(

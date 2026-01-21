@@ -331,52 +331,56 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
-        <div className="flex items-center gap-1">
+      </div>
+
+      {/* Tag Filter and Export */}
+      <div className="flex items-center justify-between gap-2">
+        {allTags.length > 0 ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag size={14} className="text-neutral-400 flex-shrink-0" />
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors ${
+                  selectedTag === tag
+                    ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700'
+                }`}
+              >
+                {tag}
+                {selectedTag === tag && <X size={10} />}
+              </button>
+            ))}
+            {selectedTag && (
+              <button
+                onClick={() => setSelectedTag(null)}
+                className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        ) : (
+          <div />
+        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => exportWorkflowsToCSV(filteredAndSortedWorkflows)}
-            className="px-2 py-2 text-xs rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            className="px-2 py-1 text-xs rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
             title="Export to CSV"
           >
             CSV
           </button>
           <button
             onClick={() => exportWorkflowsToJSON(filteredAndSortedWorkflows)}
-            className="px-2 py-2 text-xs rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            className="px-2 py-1 text-xs rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
             title="Export to JSON"
           >
             JSON
           </button>
         </div>
       </div>
-
-      {/* Tag Filter */}
-      {allTags.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <Tag size={14} className="text-neutral-400 flex-shrink-0" />
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors ${
-                selectedTag === tag
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700'
-              }`}
-            >
-              {tag}
-              {selectedTag === tag && <X size={10} />}
-            </button>
-          ))}
-          {selectedTag && (
-            <button
-              onClick={() => setSelectedTag(null)}
-              className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (

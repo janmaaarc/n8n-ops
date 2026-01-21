@@ -159,7 +159,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   value={formData.n8nUrl}
                   onChange={(e) => handleChange('n8nUrl', e.target.value)}
                   placeholder="https://your-n8n.example.com"
-                  className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
                 />
               </div>
 
@@ -181,7 +181,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onCopy={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
                   placeholder={useSupabaseCredentials && credentials?.hasApiKey ? 'Enter new API key to update' : 'Your n8n API key'}
-                  className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white font-mono"
                 />
                 {useSupabaseCredentials && credentials?.hasApiKey && (
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -235,13 +235,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => handleChange('autoRefresh', !formData.autoRefresh)}
                   className={`relative w-10 h-6 rounded-full transition-colors ${
                     formData.autoRefresh
-                      ? 'bg-indigo-500'
+                      ? 'bg-neutral-900 dark:bg-white'
                       : 'bg-neutral-200 dark:bg-neutral-700'
                   }`}
                 >
                   <span
-                    className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                      formData.autoRefresh ? 'left-5' : 'left-1'
+                    className={`absolute top-1 w-4 h-4 rounded-full shadow transition-transform ${
+                      formData.autoRefresh
+                        ? 'left-5 bg-white dark:bg-neutral-900'
+                        : 'left-1 bg-white'
                     }`}
                   />
                 </button>
@@ -257,7 +259,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <select
                     value={formData.refreshInterval}
                     onChange={(e) => handleChange('refreshInterval', Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
                   >
                     <option value={10}>10 seconds</option>
                     <option value={30}>30 seconds</option>
@@ -287,13 +289,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClick={() => handleNotificationChange('enabled', !notificationSettings.enabled)}
                     className={`relative w-10 h-6 rounded-full transition-colors ${
                       notificationSettings.enabled
-                        ? 'bg-indigo-500'
+                        ? 'bg-neutral-900 dark:bg-white'
                         : 'bg-neutral-200 dark:bg-neutral-700'
                     }`}
                   >
                     <span
-                      className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        notificationSettings.enabled ? 'left-5' : 'left-1'
+                      className={`absolute top-1 w-4 h-4 rounded-full shadow transition-transform ${
+                        notificationSettings.enabled
+                          ? 'left-5 bg-white dark:bg-neutral-900'
+                          : 'left-1 bg-white'
                       }`}
                     />
                   </button>
@@ -317,13 +321,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         onClick={() => handleNotificationChange('onError', !notificationSettings.onError)}
                         className={`relative w-10 h-6 rounded-full transition-colors ${
                           notificationSettings.onError
-                            ? 'bg-indigo-500'
+                            ? 'bg-neutral-900 dark:bg-white'
                             : 'bg-neutral-200 dark:bg-neutral-700'
                         }`}
                       >
                         <span
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                            notificationSettings.onError ? 'left-5' : 'left-1'
+                          className={`absolute top-1 w-4 h-4 rounded-full shadow transition-transform ${
+                            notificationSettings.onError
+                              ? 'left-5 bg-white dark:bg-neutral-900'
+                              : 'left-1 bg-white'
                           }`}
                         />
                       </button>
@@ -337,13 +343,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         onClick={() => handleNotificationChange('onSuccess', !notificationSettings.onSuccess)}
                         className={`relative w-10 h-6 rounded-full transition-colors ${
                           notificationSettings.onSuccess
-                            ? 'bg-indigo-500'
+                            ? 'bg-neutral-900 dark:bg-white'
                             : 'bg-neutral-200 dark:bg-neutral-700'
                         }`}
                       >
                         <span
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                            notificationSettings.onSuccess ? 'left-5' : 'left-1'
+                          className={`absolute top-1 w-4 h-4 rounded-full shadow transition-transform ${
+                            notificationSettings.onSuccess
+                              ? 'left-5 bg-white dark:bg-neutral-900'
+                              : 'left-1 bg-white'
                           }`}
                         />
                       </button>
@@ -382,7 +390,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               onClick={handleSave}
               disabled={saving || credentialsLoading}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-indigo-500 hover:bg-indigo-600 rounded transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-white dark:text-neutral-900 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 rounded transition-colors disabled:opacity-50"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
               {saving ? 'Saving...' : 'Save'}
