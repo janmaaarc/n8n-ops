@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar, MobileMenuButton } from './Sidebar';
+import { MobileBottomNav } from '../MobileBottomNav';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 
@@ -15,6 +16,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ darkMode, toggleTheme })
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+      {/* Skip to content link for accessibility */}
+      <a
+        href="#main-content"
+        className="skip-to-content"
+      >
+        Skip to main content
+      </a>
+
       <Sidebar darkMode={darkMode} toggleTheme={toggleTheme} />
 
       {/* Main Content */}
@@ -32,10 +41,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ darkMode, toggleTheme })
         </header>
 
         {/* Page Content */}
-        <div className="p-4 md:p-6 lg:p-8">
+        <div id="main-content" className="p-4 pb-20 md:p-6 md:pb-6 lg:p-8 lg:pb-8">
           <Outlet />
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 };

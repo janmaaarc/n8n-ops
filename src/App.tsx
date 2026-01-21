@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { MainLayout } from './components/layout';
@@ -8,18 +8,25 @@ import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { CommandPalette } from './components/CommandPalette';
 import { LandingPage } from './components/LandingPage';
 import { useCommandPalette } from './hooks/useCommandPalette';
-import {
-  DashboardPage,
-  WorkflowsPage,
-  ExecutionsPage,
-  CredentialsPage,
-  VariablesPage,
-  SettingsPage,
-} from './pages';
 import { useSettings } from './hooks/useSettings';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuth } from './contexts/AuthContext';
 import { isSupabaseConfigured } from './lib/supabase';
+
+// Lazy load pages for code splitting
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage').then(m => ({ default: m.WorkflowsPage })));
+const ExecutionsPage = lazy(() => import('./pages/ExecutionsPage').then(m => ({ default: m.ExecutionsPage })));
+const CredentialsPage = lazy(() => import('./pages/CredentialsPage').then(m => ({ default: m.CredentialsPage })));
+const VariablesPage = lazy(() => import('./pages/VariablesPage').then(m => ({ default: m.VariablesPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+
+// Loading fallback for lazy-loaded routes
+const PageLoader: React.FC = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <Loader2 size={24} className="animate-spin text-neutral-400" />
+  </div>
+);
 
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -90,16 +97,18 @@ const App: React.FC = () => {
 
   return (
     <>
-      <Routes>
-        <Route element={<MainLayout darkMode={darkMode} toggleTheme={toggleTheme} />}>
-          <Route path="/" element={<DashboardPage onShowSettings={() => setShowSettings(true)} />} />
-          <Route path="/workflows" element={<WorkflowsPage />} />
-          <Route path="/executions" element={<ExecutionsPage />} />
-          <Route path="/credentials" element={<CredentialsPage />} />
-          <Route path="/variables" element={<VariablesPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route element={<MainLayout darkMode={darkMode} toggleTheme={toggleTheme} />}>
+            <Route path="/" element={<DashboardPage onShowSettings={() => setShowSettings(true)} />} />
+            <Route path="/workflows" element={<WorkflowsPage />} />
+            <Route path="/executions" element={<ExecutionsPage />} />
+            <Route path="/credentials" element={<CredentialsPage />} />
+            <Route path="/variables" element={<VariablesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
 
       {/* Settings Modal (for quick access) */}
       <SettingsModal

@@ -141,3 +141,40 @@ html.dark {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Safe area for mobile devices with notch/home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Skip to content link for accessibility */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #171717;
+  color: white;
+  padding: 8px 16px;
+  z-index: 100;
+  transition: top 0.2s;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
+
+.dark .skip-to-content {
+  background: #fafafa;
+  color: #171717;
+}
+
+/* Pull to refresh animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

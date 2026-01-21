@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Key, Clock, RotateCw, CheckCircle, XCircle, Loader2, Bell, Save } from 'lucide-react';
+import { Server, Key, Clock, RotateCw, CheckCircle, XCircle, Loader2, Bell, Save, Table, List } from 'lucide-react';
 import { PageHeader } from '../components/layout';
 import { n8nApi } from '../services/n8n';
-import { useSettings, type Settings } from '../hooks/useSettings';
+import { useSettings, type Settings, type TableDensity } from '../hooks/useSettings';
 import { getNotificationSettings, saveNotificationSettings, useNotifications } from '../hooks/useNotifications';
 import { useCredentials } from '../hooks/useCredentials';
 import { useAuth } from '../contexts/AuthContext';
@@ -81,7 +81,12 @@ export const SettingsPage: React.FC = () => {
           setSaveError('Please enter your API key to save changes');
           return;
         }
-        updateSettings({ refreshInterval: formData.refreshInterval, autoRefresh: formData.autoRefresh });
+        updateSettings({
+          refreshInterval: formData.refreshInterval,
+          autoRefresh: formData.autoRefresh,
+          tableDensity: formData.tableDensity,
+          defaultPageSize: formData.defaultPageSize,
+        });
       } else {
         updateSettings(formData);
       }
@@ -115,7 +120,7 @@ export const SettingsPage: React.FC = () => {
         }
       />
 
-      <div className="max-w-2xl space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6">
         {/* Connection Section */}
         <section className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6">
           <h3 className="text-sm font-medium text-neutral-900 dark:text-white mb-4">
@@ -240,6 +245,57 @@ export const SettingsPage: React.FC = () => {
                 </select>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Display Section */}
+        <section className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6">
+          <h3 className="text-sm font-medium text-neutral-900 dark:text-white mb-4">
+            Display
+          </h3>
+          <div className="space-y-4">
+            {/* Table Density */}
+            <div>
+              <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300 mb-2">
+                <Table size={14} className="text-neutral-400" />
+                Table density
+              </label>
+              <div className="flex gap-2">
+                {(['compact', 'normal', 'comfortable'] as TableDensity[]).map((density) => (
+                  <button
+                    key={density}
+                    type="button"
+                    onClick={() => handleChange('tableDensity', density)}
+                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                      formData.tableDensity === density
+                        ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border-neutral-900 dark:border-white'
+                        : 'bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
+                    }`}
+                  >
+                    {density.charAt(0).toUpperCase() + density.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Default Page Size */}
+            <div>
+              <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300 mb-2">
+                <List size={14} className="text-neutral-400" />
+                Default page size
+              </label>
+              <select
+                value={formData.defaultPageSize}
+                onChange={(e) => handleChange('defaultPageSize', Number(e.target.value))}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
+              >
+                <option value={10}>10 items</option>
+                <option value={15}>15 items</option>
+                <option value={25}>25 items</option>
+                <option value={50}>50 items</option>
+                <option value={100}>100 items</option>
+              </select>
+            </div>
           </div>
         </section>
 

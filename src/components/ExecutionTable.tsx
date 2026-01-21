@@ -13,10 +13,37 @@ import {
   Webhook,
   MousePointer,
   Zap,
+  X,
 } from 'lucide-react';
-import { format, formatDistanceToNow, differenceInSeconds } from 'date-fns';
+import { format, formatDistanceToNow, differenceInSeconds, subHours, subDays, isAfter } from 'date-fns';
 import type { Execution, Workflow } from '../types';
 import { getStoredSettings } from '../hooks/useSettings';
+
+type TimeFilter = 'all' | '1h' | '24h' | '7d' | '30d';
+
+const TIME_FILTERS: { value: TimeFilter; label: string }[] = [
+  { value: 'all', label: 'All time' },
+  { value: '1h', label: 'Last hour' },
+  { value: '24h', label: 'Last 24h' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: '30d', label: 'Last 30 days' },
+];
+
+const getTimeFilterDate = (filter: TimeFilter): Date | null => {
+  const now = new Date();
+  switch (filter) {
+    case '1h':
+      return subHours(now, 1);
+    case '24h':
+      return subHours(now, 24);
+    case '7d':
+      return subDays(now, 7);
+    case '30d':
+      return subDays(now, 30);
+    default:
+      return null;
+  }
+};
 
 interface ExecutionTableProps {
   executions: Execution[];
@@ -125,6 +152,7 @@ export const ExecutionTable: React.FC<ExecutionTableProps> = ({
   const [sortColumn, setSortColumn] = useState<SortColumn>('startTime');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
 
   const workflowNameMap = useMemo(() => {
@@ -135,7 +163,7 @@ export const ExecutionTable: React.FC<ExecutionTableProps> = ({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterBy, sortColumn, sortDirection]);
+  }, [search, filterBy, timeFilter, sortColumn, sortDirection]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -159,6 +187,12 @@ export const ExecutionTable: React.FC<ExecutionTableProps> = ({
 
   const filteredAndSortedExecutions = useMemo(() => {
     let result = [...executions];
+
+    // Filter by time
+    const timeFilterDate = getTimeFilterDate(timeFilter);
+    if (timeFilterDate) {
+      result = result.filter((e) => isAfter(new Date(e.startedAt), timeFilterDate));
+    }
 
     // Filter by search (workflow name)
     if (search) {
@@ -211,7 +245,7 @@ export const ExecutionTable: React.FC<ExecutionTableProps> = ({
     });
 
     return result;
-  }, [executions, search, filterBy, sortColumn, sortDirection, workflowNameMap]);
+  }, [executions, search, filterBy, timeFilter, sortColumn, sortDirection, workflowNameMap]);
 
   // Navigate to page with highlighted item and scroll to it
   useEffect(() => {
@@ -254,33 +288,96 @@ export const ExecutionTable: React.FC<ExecutionTableProps> = ({
     );
   }
 
+  const hasActiveFilters = filterBy !== 'all' || timeFilter !== 'all' || search;
+
+  const clearAllFilters = () => {
+    setSearch('');
+    setFilterBy('all');
+    setTimeFilter('all');
+  };
+
   return (
     <div className="space-y-3">
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-          />
-          <input
-            type="text"
-            placeholder="Search by workflow name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-transparent"
-          />
-        </div>
-        <select
-          value={filterBy}
-          onChange={(e) => setFilterBy(e.target.value as FilterOption)}
-          className="px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
+      {/* Quick Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Time Filters */}
+        {TIME_FILTERS.map((filter) => (
+          <button
+            key={filter.value}
+            onClick={() => setTimeFilter(filter.value)}
+            className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+              timeFilter === filter.value
+                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+
+        {/* Divider */}
+        <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700" />
+
+        {/* Status Filters */}
+        <button
+          onClick={() => setFilterBy(filterBy === 'success' ? 'all' : 'success')}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+            filterBy === 'success'
+              ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400'
+              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+          }`}
         >
-          <option value="all">All Status</option>
-          <option value="success">Success</option>
-          <option value="error">Error</option>
-          <option value="running">Running</option>
-        </select>
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          Success
+        </button>
+        <button
+          onClick={() => setFilterBy(filterBy === 'error' ? 'all' : 'error')}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+            filterBy === 'error'
+              ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400'
+              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+          }`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          Errors
+        </button>
+        <button
+          onClick={() => setFilterBy(filterBy === 'running' ? 'all' : 'running')}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+            filterBy === 'running'
+              ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400'
+              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+          }`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          Running
+        </button>
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <button
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+          >
+            <X size={12} />
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search
+          size={16}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+        />
+        <input
+          type="text"
+          placeholder="Search by workflow name or execution ID..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-transparent"
+        />
       </div>
 
       {/* Execution Table */}

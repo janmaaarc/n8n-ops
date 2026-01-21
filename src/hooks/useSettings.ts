@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 
+export type TableDensity = 'compact' | 'normal' | 'comfortable';
+
 export interface Settings {
   n8nUrl: string;
   apiKey: string;
   refreshInterval: number;
   autoRefresh: boolean;
+  tableDensity: TableDensity;
+  defaultPageSize: number;
 }
 
 const STORAGE_KEY = 'n8n-dashboard-settings';
@@ -14,6 +18,8 @@ const defaultSettings: Settings = {
   apiKey: '',
   refreshInterval: 30,
   autoRefresh: true,
+  tableDensity: 'normal',
+  defaultPageSize: 15,
 };
 
 const loadSettings = (): Settings => {
