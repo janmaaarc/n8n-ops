@@ -36,7 +36,7 @@ const BackupsPage = lazy(() => import('./pages/BackupsPage').then(m => ({ defaul
 
 // Loading fallback for lazy-loaded routes
 const PageLoader: React.FC = () => (
-  <div className="flex items-center justify-center min-h-[50vh]">
+  <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
     <Loader2 size={24} className="animate-spin text-neutral-400" />
   </div>
 );
