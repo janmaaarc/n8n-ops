@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar, MobileMenuButton } from './Sidebar';
 import { MobileBottomNav } from '../MobileBottomNav';
-import { useSidebar } from '../../contexts/SidebarContext';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 
 interface MainLayoutProps {
@@ -11,7 +10,6 @@ interface MainLayoutProps {
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ darkMode, toggleTheme }) => {
-  const { isCollapsed } = useSidebar();
   const isMobile = useIsMobile();
 
   return (
@@ -30,7 +28,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ darkMode, toggleTheme })
       <main
         className={`
           min-h-screen transition-all duration-200
-          ${isMobile ? 'ml-0' : isCollapsed ? 'md:ml-16' : 'md:ml-60'}
+          ${isMobile ? 'ml-0' : 'md:ml-60'}
         `}
       >
         {/* Mobile Header */}

@@ -40,7 +40,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
-  const { isCollapsed, isMobileOpen, closeMobile } = useSidebar();
+  const { isMobileOpen, closeMobile } = useSidebar();
   const { user, signOut, isAuthenticated } = useAuth();
   const location = useLocation();
 
@@ -63,12 +63,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
             ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white'
             : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white'
           }
-          ${isCollapsed && !isMobileOpen ? 'justify-center' : ''}
         `}
-        title={isCollapsed && !isMobileOpen ? item.label : undefined}
       >
         <Icon size={20} className="flex-shrink-0" />
-        {(!isCollapsed || isMobileOpen) && <span>{item.label}</span>}
+        <span>{item.label}</span>
       </NavLink>
     );
   };
@@ -76,13 +74,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className={`flex items-center gap-2 px-3 py-4 ${isCollapsed && !isMobileOpen ? 'justify-center' : ''}`}>
+      <div className="flex items-center gap-2 px-3 py-4">
         <div className="w-8 h-8 rounded-lg bg-neutral-900 dark:bg-white flex items-center justify-center flex-shrink-0">
           <Workflow size={18} className="text-white dark:text-neutral-900" />
         </div>
-        {(!isCollapsed || isMobileOpen) && (
-          <span className="text-sm font-semibold text-neutral-900 dark:text-white">n8n Pulse</span>
-        )}
+        <span className="text-sm font-semibold text-neutral-900 dark:text-white">n8n Pulse</span>
       </div>
 
       {/* Main Navigation */}
@@ -99,30 +95,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
         ))}
 
         {/* Theme Toggle */}
-        <div className={`flex items-center gap-3 px-3 py-2 ${isCollapsed && !isMobileOpen ? 'justify-center' : ''}`}>
+        <div className="flex items-center gap-3 px-3 py-2">
           <ThemeToggle darkMode={darkMode} toggleTheme={toggleTheme} />
-          {(!isCollapsed || isMobileOpen) && (
-            <span className="text-sm text-neutral-600 dark:text-neutral-400">
-              {darkMode ? 'Dark' : 'Light'}
-            </span>
-          )}
+          <span className="text-sm text-neutral-600 dark:text-neutral-400">
+            {darkMode ? 'Dark' : 'Light'}
+          </span>
         </div>
 
         {/* User / Sign Out */}
         {isSupabaseConfigured() && isAuthenticated && (
           <button
             onClick={handleSignOut}
-            className={`
-              flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full transition-colors
-              text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white
-              ${isCollapsed && !isMobileOpen ? 'justify-center' : ''}
-            `}
-            title={isCollapsed && !isMobileOpen ? `Sign out (${user?.email})` : undefined}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full transition-colors text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white"
           >
             <LogOut size={20} className="flex-shrink-0" />
-            {(!isCollapsed || isMobileOpen) && (
-              <span className="truncate">{user?.email || 'Sign out'}</span>
-            )}
+            <span className="truncate">{user?.email || 'Sign out'}</span>
           </button>
         )}
       </div>
@@ -145,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ darkMode, toggleTheme }) => {
         className={`
           fixed top-0 left-0 h-full bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 z-50 flex flex-col transition-all duration-200
           ${isMobileOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0'}
-          ${isCollapsed && !isMobileOpen ? 'md:w-16' : 'md:w-60'}
+          md:w-60
         `}
       >
         {/* Mobile Close Button */}
